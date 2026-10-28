@@ -1,0 +1,54 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/player/first_person_body.gd" id="2_body"]
+[ext_resource type="Script" path="res://scripts/player/camera_shake.gd" id="3_shake"]
+[ext_resource type="Script" path="res://scripts/player/axe_controller.gd" id="4_axe"]
+[ext_resource type="AudioStream" path="res://assets/sounds/footsteps/grass_0.ogg" id="5_fs0"]
+[ext_resource type="AudioStream" path="res://assets/sounds/footsteps/grass_1.ogg" id="6_fs1"]
+[ext_resource type="AudioStream" path="res://assets/sounds/footsteps/grass_2.ogg" id="7_fs2"]
+[ext_resource type="AudioStream" path="res://assets/sounds/footsteps/grass_3.ogg" id="8_fs3"]
+[ext_resource type="AudioStream" path="res://assets/sounds/footsteps/grass_4.ogg" id="9_fs4"]
+[ext_resource type="AudioStream" path="res://assets/sounds/axe/axe_chop.ogg" id="10_chop"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
+height = 1.9
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+collision_layer = 2
+collision_mask = 5
+floor_snap_length = 0.3
+script = ExtResource("1_player")
+footstep_sounds = Array[AudioStream]([ExtResource("5_fs0"), ExtResource("6_fs1"), ExtResource("7_fs2"), ExtResource("8_fs3"), ExtResource("9_fs4")])
+chop_sound = ExtResource("10_chop")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Body" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.04)
+script = ExtResource("2_body")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.74, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+current = true
+fov = 78.0
+near = 0.01
+script = ExtResource("3_shake")
+
+[node name="AxeRig" type="Node3D" parent="Head/Camera3D" node_paths=PackedStringArray("body", "camera")]
+script = ExtResource("4_axe")
+body = NodePath("../../../Body")
+camera = NodePath("..")
+
+[node name="FootstepAudio" type="AudioStreamPlayer3D" parent="."]
+volume_db = -4.0
+max_distance = 25.0
+
+[node name="AxeAudio" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, -0.6)
+max_distance = 30.0

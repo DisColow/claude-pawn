@@ -1,0 +1,41 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/trees/choppable_tree.gd" id="1_script"]
+[ext_resource type="AudioStream" path="res://assets/sounds/axe/axe_impact_0.ogg" id="2_hit0"]
+[ext_resource type="AudioStream" path="res://assets/sounds/axe/axe_impact_1.ogg" id="3_hit1"]
+[ext_resource type="AudioStream" path="res://assets/sounds/axe/axe_impact_2.ogg" id="4_hit2"]
+[ext_resource type="AudioStream" path="res://assets/sounds/axe/axe_impact_3.ogg" id="5_hit3"]
+[ext_resource type="AudioStream" path="res://assets/sounds/axe/axe_impact_4.ogg" id="6_hit4"]
+[ext_resource type="AudioStream" path="res://assets/sounds/tree/tree_creak.ogg" id="7_creak"]
+[ext_resource type="AudioStream" path="res://assets/sounds/tree/tree_fall_thud.ogg" id="8_thud"]
+[ext_resource type="AudioStream" path="res://assets/sounds/tree/tree_crash.ogg" id="9_crash"]
+
+[node name="ChoppableTree" type="StaticBody3D"]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_script")
+hit_sounds = Array[AudioStream]([ExtResource("2_hit0"), ExtResource("3_hit1"), ExtResource("4_hit2"), ExtResource("5_hit3"), ExtResource("6_hit4")])
+creak_sound = ExtResource("7_creak")
+impact_sounds = Array[AudioStream]([ExtResource("8_thud"), ExtResource("9_crash")])
+
+[node name="StumpCollision" type="CollisionShape3D" parent="."]
+
+[node name="TrunkCollision" type="CollisionShape3D" parent="."]
+
+[node name="Stump" type="Node3D" parent="."]
+
+[node name="TrunkPivot" type="Node3D" parent="."]
+
+[node name="HitAudio" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+max_distance = 40.0
+
+[node name="CreakAudio" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+volume_db = 3.0
+max_distance = 50.0
+
+[node name="ImpactAudio" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+volume_db = 4.0
+max_distance = 60.0

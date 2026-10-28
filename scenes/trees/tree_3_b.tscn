@@ -1,0 +1,11 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/trees/choppable_tree.tscn" id="1_base"]
+[ext_resource type="PackedScene" path="res://assets/models/trees/tree_3_b_stump.glb" id="2_stump"]
+[ext_resource type="PackedScene" path="res://assets/models/trees/tree_3_b_trunk.glb" id="3_trunk"]
+
+[node name="Tree3B" instance=ExtResource("1_base")]
+
+[node name="StumpModel" parent="Stump" instance=ExtResource("2_stump")]
+
+[node name="TrunkModel" parent="TrunkPivot" instance=ExtResource("3_trunk")]

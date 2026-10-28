@@ -1,0 +1,27 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/props/wood_log.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/models/props/wood_log.glb" id="2_model"]
+[ext_resource type="AudioStream" path="res://assets/sounds/tree/log_drop.ogg" id="3_drop"]
+[ext_resource type="AudioStream" path="res://assets/sounds/axe/axe_impact_2.ogg" id="4_drop"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_log"]
+height = 1.0
+radius = 0.125
+
+[node name="WoodLog" type="RigidBody3D"]
+collision_layer = 8
+collision_mask = 15
+mass = 12.0
+angular_damp = 1.5
+script = ExtResource("1_script")
+drop_sounds = Array[AudioStream]([ExtResource("3_drop"), ExtResource("4_drop")])
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0)
+shape = SubResource("CylinderShape3D_log")
+
+[node name="DropAudio" type="AudioStreamPlayer3D" parent="."]
+max_distance = 30.0
