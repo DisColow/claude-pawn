@@ -1,7 +1,9 @@
 class_name ChoppableTree
 extends StaticBody3D
-## Arbre abattable : encaisse les coups de hache, oscille, puis bascule autour d'une charnière
-## au sommet de la souche. À l'impact au sol, le tronc se transforme en rondins physiques.
+## Arbre abattable : encaisse les coups de hache et oscille. Quand sa vie tombe à zéro, le tronc
+## devient un corps rigide, retenu à la souche par une rotule (charnière), et le dernier coup lui
+## donne son élan : il tombe là où la physique l'emmène (direction du coup + penchant naturel dû au
+## feuillage, obstacles). Au contact du sol, il éclate en rondins physiques.
 ##
 ## Le modèle est découpé en deux GLB (souche + tronc). L'origine du nœud du tronc dans le GLB
 ## est la charnière de chute : le script la récupère automatiquement, aucun réglage par variante.
@@ -12,10 +14,11 @@ signal landed(logs: Array[RigidBody3D])
 
 enum State { STANDING, FALLING, FALLEN }
 
-const GRAVITY := 9.81
 ## Hauteur (au-dessus du sol) où l'on mesure le rayon du tronc pour sa collision.
 const TRUNK_PROBE_MIN_Y := 0.8
 const TRUNK_PROBE_MAX_Y := 1.8
+## Pas de la grille utilisée pour réduire les points des enveloppes convexes (m).
+const HULL_GRID := 0.08
 
 @export var log_scene: PackedScene = preload("res://scenes/props/wood_log.tscn")
 @export var wood_chips_scene: PackedScene = preload("res://scenes/vfx/wood_chips_vfx.tscn")
@@ -28,15 +31,16 @@ var state := State.STANDING
 var health := GameConfig.TREE_MAX_HEALTH
 var hit_count := 0
 
-var _sway := Vector3.ZERO           # vecteur de rotation (axe * angle), plan horizontal
+var _sway := Vector3.ZERO           # vecteur de rotation (axe * angle) dans le repère de l'arbre
 var _sway_velocity := Vector3.ZERO
-var _fall_direction := Vector3.FORWARD
-var _fall_axis := Vector3.RIGHT
-var _fall_angle := 0.0
-var _fall_velocity := 0.0
-var _fall_length := 4.0             # longueur du pendule équivalent (m)
-var _trunk_length := 4.0            # distance charnière -> point le plus éloigné du tronc
-var _has_hit_ground := false
+var _trunk_length := 4.0            # distance charnière -> sommet du tronc
+var _trunk_radius := 0.25
+var _fall_shapes: Array[Shape3D] = []
+var _fall_center_of_mass := Vector3.ZERO
+
+var _trunk_body: RigidBody3D
+var _hinge: PinJoint3D
+var _fall_time := 0.0
 
 @onready var _trunk_pivot: Node3D = $TrunkPivot
 @onready var _trunk_collision: CollisionShape3D = $TrunkCollision
@@ -50,6 +54,7 @@ func _ready() -> void:
 	add_to_group("choppable_trees")
 	_setup_hinge()
 	_setup_collisions()
+	_build_fall_shapes()
 
 
 ## Point d'entrée des dégâts. `from_position` = position de l'attaquant (oriente l'oscillation et la chute).
@@ -59,8 +64,9 @@ func take_hit(damage: float, hit_position: Vector3, hit_normal: Vector3, from_po
 	hit_count += 1
 	health = maxf(health - damage, 0.0)
 
-	var push := _horizontal_direction(global_position - from_position)
-	_sway_velocity += Vector3.UP.cross(push).normalized() * GameConfig.TREE_SWAY_IMPULSE
+	var push := _horizontal_direction(hit_position - from_position)
+	var sway_axis := Vector3.UP.cross(push).normalized()
+	_sway_velocity += global_basis.inverse() * sway_axis * GameConfig.TREE_SWAY_IMPULSE
 	_spawn_chips(hit_position, hit_normal)
 	_play_random(_hit_audio, hit_sounds, 0.9, 1.1)
 	chopped.emit(hit_count, health)
@@ -88,92 +94,151 @@ func _update_sway(delta: float) -> void:
 
 # --- Chute physique -------------------------------------------------------------------------
 
-func _start_fall(direction: Vector3) -> void:
+func _start_fall(push: Vector3) -> void:
 	state = State.FALLING
-	_fall_direction = direction
-	_fall_axis = Vector3.UP.cross(direction).normalized()
-	# On part de l'inclinaison courante due à l'oscillation, projetée sur l'axe de chute.
-	_fall_angle = maxf(_sway.dot(_fall_axis), 0.0) + GameConfig.TREE_FALL_INITIAL_ANGLE
-	_fall_velocity = maxf(_sway_velocity.dot(_fall_axis), 0.0)
-	_sway = Vector3.ZERO
 	_trunk_collision.set_deferred("disabled", true)
+	_trunk_body = _create_trunk_body()
+	# Le dernier coup lance la bascule dans sa direction ; la gravité amplifie ensuite cet élan
+	# ET le penchant naturel de l'arbre (feuillage décentré) : la chute mélange les deux.
+	var kick_axis := Vector3.UP.cross(push).normalized()
+	_trunk_body.angular_velocity = global_basis * _sway_velocity + kick_axis * GameConfig.TREE_FELL_KICK
+	_sway = Vector3.ZERO
+	_sway_velocity = Vector3.ZERO
 	if creak_sound:
 		_creak_audio.stream = creak_sound
 		_creak_audio.play()
-	felled.emit(direction)
+	felled.emit(push)
+
+
+## Transforme le tronc en corps rigide attaché à la souche par une rotule.
+func _create_trunk_body() -> RigidBody3D:
+	var body := RigidBody3D.new()
+	body.name = "FallingTrunk"
+	body.collision_layer = 4
+	body.collision_mask = 1 | 4 | 8
+	body.mass = GameConfig.TREE_TRUNK_MASS
+	body.center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
+	body.center_of_mass = _fall_center_of_mass
+	body.continuous_cd = true
+	body.contact_monitor = true
+	body.max_contacts_reported = 4
+	body.angular_damp = GameConfig.TREE_FALL_ANGULAR_DAMP
+	var material := PhysicsMaterial.new()
+	material.friction = 0.9
+	material.bounce = 0.15
+	body.physics_material_override = material
+	for shape in _fall_shapes:
+		var collision := CollisionShape3D.new()
+		collision.shape = shape
+		body.add_child(collision)
+	add_child(body)
+	body.global_transform = _trunk_pivot.global_transform
+	_trunk_pivot.reparent(body)
+	_trunk_pivot.transform = Transform3D.IDENTITY
+	# Le tronc repose dans la souche : on ignore les collisions entre les deux.
+	body.add_collision_exception_with(self)
+	body.body_entered.connect(_on_trunk_contact)
+
+	_hinge = PinJoint3D.new()
+	_hinge.name = "Hinge"
+	_hinge.position = to_local(body.global_position)
+	_hinge.node_a = NodePath("..")
+	_hinge.node_b = NodePath("../" + body.name)
+	add_child(_hinge)
+	return body
 
 
 func _update_fall(delta: float) -> void:
-	# Pendule pesant (tige pivotant à une extrémité) : alpha = 3g / (2L) * sin(theta)
-	var angular_acceleration := 3.0 * GRAVITY / (2.0 * _fall_length) * sin(_fall_angle)
-	_fall_velocity += angular_acceleration * delta
-	_fall_angle += _fall_velocity * delta
-
-	var rest := GameConfig.TREE_FALL_REST_ANGLE
-	if _fall_angle >= rest:
-		_fall_angle = rest
-		if not _has_hit_ground:
-			_has_hit_ground = true
-			_on_ground_impact(_fall_velocity)
-		_fall_velocity = -_fall_velocity * GameConfig.TREE_FALL_BOUNCE
-		if absf(_fall_velocity) < 0.08:
-			_fall_velocity = 0.0
-			state = State.FALLEN
-			_vanish_trunk()
-	_trunk_pivot.basis = Basis(_fall_axis, _fall_angle)
+	_fall_time += delta
+	# La charnière cède une fois le tronc bien engagé : il peut alors glisser hors de la souche.
+	if _hinge and _trunk_tilt() > GameConfig.TREE_HINGE_BREAK_ANGLE:
+		_hinge.queue_free()
+		_hinge = null
+	# Sécurité : tronc coincé (appuyé sur un autre arbre) ou tombé hors du monde.
+	if _fall_time > GameConfig.TREE_MAX_FALL_TIME or _trunk_body.global_position.y < global_position.y - 20.0:
+		_on_ground_impact(_trunk_tip_speed())
 
 
+## Seul le sol (couche "world") déclenche l'impact : un tronc peut rebondir sur un autre arbre avant.
+func _on_trunk_contact(other: Node) -> void:
+	if state != State.FALLING or not other is CollisionObject3D:
+		return
+	if other.collision_layer & 1 and _trunk_tilt() > GameConfig.TREE_IMPACT_MIN_TILT:
+		_on_ground_impact(_trunk_tip_speed())
+
+
+## Au contact du sol, le tronc éclate en rondins dans un nuage de poussière.
 func _on_ground_impact(impact_speed: float) -> void:
+	state = State.FALLEN
 	_creak_audio.stop()
 	_play_random(_impact_audio, impact_sounds, 0.9, 1.05)
 
-	var trunk_mid := _trunk_pivot.global_position + _fall_direction * _trunk_length * 0.5
-	trunk_mid.y = global_position.y + 0.1
-	_spawn_dust(trunk_mid)
+	var axis := _trunk_axis()
+	var trunk_mid := (axis[0] + axis[1]) * 0.5
+	trunk_mid.y = _ground_height(trunk_mid) + 0.1
+	_spawn_dust(trunk_mid, _horizontal_direction(axis[1] - axis[0]))
 
-	var intensity := clampf(impact_speed / 3.0, 0.4, 1.0) * GameConfig.SHAKE_TREE_FALL
+	var intensity := clampf(impact_speed / 8.0, 0.4, 1.0) * GameConfig.SHAKE_TREE_FALL
 	get_tree().call_group("camera_shake_receivers", "add_trauma_at",
 		trunk_mid, intensity, GameConfig.SHAKE_TREE_FALL_RADIUS)
 
-	landed.emit(_spawn_logs())
+	var logs := _burst_into_logs()
+	if _hinge:
+		_hinge.queue_free()
+	_trunk_body.queue_free()
+	landed.emit(logs)
 
 
-## Le tronc couché se dissout dans le nuage de poussière, laissant place aux rondins.
-func _vanish_trunk() -> void:
-	var duration := GameConfig.TREE_TRUNK_VANISH_TIME
-	var tween := create_tween().set_parallel()
-	for mesh_instance: MeshInstance3D in _trunk_pivot.find_children("*", "MeshInstance3D", true, false):
-		mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		for surface in mesh_instance.mesh.get_surface_count():
-			var material := mesh_instance.get_active_material(surface) as BaseMaterial3D
-			if material == null:
-				continue
-			material = material.duplicate()
-			material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			mesh_instance.set_surface_override_material(surface, material)
-			tween.tween_property(material, "albedo_color:a", 0.0, duration)
-	tween.tween_property(_trunk_pivot, "position:y", _trunk_pivot.position.y - 0.3, duration)
-	tween.chain().tween_callback(_trunk_pivot.hide)
-
-
-func _spawn_logs() -> Array[RigidBody3D]:
+## Rondins répartis le long du tronc au moment de l'impact, projetés par l'éclatement.
+func _burst_into_logs() -> Array[RigidBody3D]:
 	var logs: Array[RigidBody3D] = []
-	var side := _fall_axis
+	var axis := _trunk_axis()
+	var along := axis[1] - axis[0]
+	var log_axis := along.normalized()
+	var side := Vector3.UP.cross(log_axis).normalized()
+	if side.length_squared() < 0.01:
+		side = Vector3.RIGHT
+	var com := _trunk_body.global_transform * _trunk_body.center_of_mass
 	var count := GameConfig.LOGS_PER_TREE
 	for i in count:
+		var spot := axis[0] + along * lerpf(0.15, 0.7, float(i) / maxf(count - 1, 1))
+		spot.y = maxf(spot.y, _ground_height(spot) + 0.3)
 		var wood_log: RigidBody3D = log_scene.instantiate()
 		get_parent().add_child(wood_log)
-		# Répartis le long du tronc couché, devant la souche.
-		var along := lerpf(1.2, maxf(_trunk_length * 0.75, 2.6), float(i) / maxf(count - 1, 1))
-		var spot := global_position + _fall_direction * along + side * randf_range(-0.45, 0.45)
-		spot.y = global_position.y + 0.45 + 0.15 * i
-		var yaw := atan2(-_fall_direction.z, _fall_direction.x) + randf_range(-0.5, 0.5)
-		wood_log.global_transform = Transform3D(Basis(Vector3.UP, yaw), spot)
-		var impulse := (_fall_direction * 0.4 + side * randf_range(-1.0, 1.0) + Vector3.UP * 0.8).normalized()
-		wood_log.apply_central_impulse(impulse * GameConfig.LOG_SCATTER_IMPULSE * wood_log.mass)
-		wood_log.apply_torque_impulse(Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * wood_log.mass * 0.2)
+		# Le rondin (axe X de son modèle) suit l'axe du tronc, avec un peu de désordre.
+		var log_basis := Basis(log_axis, side.cross(log_axis).normalized(), side).rotated(Vector3.UP, randf_range(-0.35, 0.35))
+		wood_log.global_transform = Transform3D(log_basis, spot)
+		# Hérite d'une partie de la vitesse du tronc, plus l'éclatement (latéral et vers le haut).
+		var trunk_velocity := _trunk_body.linear_velocity + _trunk_body.angular_velocity.cross(spot - com)
+		var burst := (side * randf_range(-1.0, 1.0) + Vector3.UP * randf_range(0.6, 1.0)).normalized()
+		wood_log.linear_velocity = trunk_velocity * 0.25 + burst * GameConfig.LOG_BURST_SPEED
+		wood_log.angular_velocity = Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * 4.0
+		_spawn_chips(spot, Vector3.UP)
 		logs.append(wood_log)
 	return logs
+
+
+func _trunk_tilt() -> float:
+	return _trunk_body.global_basis.y.normalized().angle_to(Vector3.UP)
+
+
+## [base, sommet] du tronc en coordonnées globales.
+func _trunk_axis() -> Array[Vector3]:
+	var base := _trunk_body.global_transform * Vector3.ZERO
+	var top := _trunk_body.global_transform * Vector3(0.0, _trunk_length, 0.0)
+	return [base, top]
+
+
+func _trunk_tip_speed() -> float:
+	var tip := _trunk_axis()[1]
+	var com := _trunk_body.global_transform * _trunk_body.center_of_mass
+	return (_trunk_body.linear_velocity + _trunk_body.angular_velocity.cross(tip - com)).length()
+
+
+func _ground_height(at: Vector3) -> float:
+	var query := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 3.0, at + Vector3.DOWN * 10.0, 1)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	return hit.position.y if not hit.is_empty() else global_position.y
 
 
 # --- Mise en place ------------------------------------------------------------------------
@@ -190,11 +255,7 @@ func _setup_hinge() -> void:
 		if child is Node3D:
 			child.position -= hinge_local
 
-	var aabb := _local_aabb(trunk_mesh)
-	var farthest := maxf(aabb.end.y, 0.5)
-	_trunk_length = farthest
-	# Le feuillage concentre la masse vers le haut : pendule équivalent un peu plus long que la moitié.
-	_fall_length = maxf(farthest * 0.85, 2.0)
+	_trunk_length = maxf(_local_aabb(trunk_mesh).end.y, 0.5)
 
 
 func _setup_collisions() -> void:
@@ -204,6 +265,7 @@ func _setup_collisions() -> void:
 	var trunk_radius := 0.25
 	if trunk_mesh:
 		trunk_radius = _radius_between(trunk_mesh, TRUNK_PROBE_MIN_Y, TRUNK_PROBE_MAX_Y, 0.25)
+	_trunk_radius = trunk_radius
 	var stump_radius := trunk_radius
 	if stump_mesh:
 		stump_radius = _radius_between(stump_mesh, 0.0, hinge_y, trunk_radius) * 0.85
@@ -219,6 +281,63 @@ func _setup_collisions() -> void:
 	stump_shape.height = hinge_y
 	_stump_collision.shape = stump_shape
 	_stump_collision.position = Vector3(_trunk_pivot.position.x, hinge_y * 0.5, _trunk_pivot.position.z)
+
+
+## Collisions du tronc en chute : deux enveloppes convexes (fût et feuillage) calculées depuis le mesh,
+## dans le repère de la charnière. Le feuillage commence là où le mesh s'élargit nettement.
+func _build_fall_shapes() -> void:
+	var trunk_mesh := _find_mesh(_trunk_pivot)
+	if trunk_mesh == null:
+		return
+	var to_pivot := _trunk_pivot.global_transform.affine_inverse() * trunk_mesh.global_transform
+	var points := PackedVector3Array()
+	for surface in trunk_mesh.mesh.get_surface_count():
+		var vertices: PackedVector3Array = trunk_mesh.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]
+		for vertex in vertices:
+			points.append(to_pivot * vertex)
+
+	var canopy_start := _canopy_start_height(points)
+	var trunk_points := {}
+	var canopy_points := {}
+	for p in points:
+		var key := Vector3i((p / HULL_GRID).round())
+		if p.y < canopy_start:
+			trunk_points[key] = p
+		if p.y >= canopy_start * 0.85:
+			canopy_points[key] = p
+
+	_fall_shapes.clear()
+	var trunk_center := Vector3.ZERO
+	var canopy_center := Vector3.ZERO
+	for hull_points: Dictionary in [trunk_points, canopy_points]:
+		if hull_points.size() < 4:
+			continue
+		var shape := ConvexPolygonShape3D.new()
+		shape.points = PackedVector3Array(hull_points.values())
+		_fall_shapes.append(shape)
+	for p: Vector3 in trunk_points.values():
+		trunk_center += p / trunk_points.size()
+	for p: Vector3 in canopy_points.values():
+		canopy_center += p / canopy_points.size()
+	# Le bois du fût pèse plus lourd que le feuillage.
+	_fall_center_of_mass = trunk_center.lerp(canopy_center, GameConfig.TREE_CANOPY_MASS_SHARE)
+
+
+## Première hauteur (au-dessus de 1 m) où le mesh devient bien plus large que le fût.
+func _canopy_start_height(points: PackedVector3Array) -> float:
+	const BAND := 0.25
+	var bands := {}
+	for p in points:
+		var band := int(p.y / BAND)
+		var r := Vector2(p.x, p.z).length()
+		bands[band] = maxf(bands.get(band, 0.0), r)
+	var keys := bands.keys()
+	keys.sort()
+	for band: int in keys:
+		var height := band * BAND
+		if height > 1.0 and bands[band] > _trunk_radius * 4.0:
+			return height
+	return _trunk_length * 0.5
 
 
 ## Rayon moyen des sommets du mesh dont la hauteur (repère de l'arbre) est dans [min_y, max_y].
@@ -248,13 +367,13 @@ func _spawn_chips(hit_position: Vector3, hit_normal: Vector3) -> void:
 	chips.global_basis = Basis.looking_at(-normal, Vector3.UP if absf(normal.y) < 0.95 else Vector3.RIGHT)
 
 
-func _spawn_dust(at: Vector3) -> void:
+func _spawn_dust(at: Vector3, direction: Vector3) -> void:
 	var dust: Node3D = dust_scene.instantiate()
 	if dust.has_method("set_length"):
 		dust.set_length(_trunk_length)
 	get_parent().add_child(dust)
 	dust.global_position = at
-	dust.global_basis = Basis.looking_at(_fall_direction, Vector3.UP)
+	dust.global_basis = Basis.looking_at(direction, Vector3.UP)
 
 
 func _play_random(player: AudioStreamPlayer3D, streams: Array[AudioStream], pitch_min: float, pitch_max: float) -> void:

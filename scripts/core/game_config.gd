@@ -38,8 +38,13 @@ const SHAKE_TREE_FALL_RADIUS := 18.0    # au-delà, pas de secousse
 const TREE_SWAY_IMPULSE := 0.2          # vitesse angulaire (rad/s) ajoutée par coup
 const TREE_SWAY_STIFFNESS := 60.0       # raideur du ressort d'oscillation
 const TREE_SWAY_DAMPING := 4.5          # amortissement de l'oscillation
-const TREE_FALL_INITIAL_ANGLE := 0.04   # rad, déséquilibre initial
-const TREE_FALL_REST_ANGLE := 1.45      # rad (~83°), angle de repos au sol
-const TREE_FALL_BOUNCE := 0.22          # restitution du rebond à l'impact
-const TREE_TRUNK_VANISH_TIME := 0.45    # le tronc se résorbe en rondins (s)
-const LOG_SCATTER_IMPULSE := 1.6
+
+# --- Chute physique des arbres ------------------------------------------------
+const TREE_TRUNK_MASS := 350.0                      # kg
+const TREE_CANOPY_MASS_SHARE := 0.35                # 0 = masse au centre du fût, 1 = au centre du feuillage
+const TREE_FELL_KICK := 0.6                         # élan de bascule donné par le dernier coup (rad/s)
+const TREE_FALL_ANGULAR_DAMP := 0.3
+const TREE_HINGE_BREAK_ANGLE := deg_to_rad(55.0)    # la charnière cède au-delà de cette inclinaison
+const TREE_IMPACT_MIN_TILT := deg_to_rad(35.0)      # contact considéré comme "impact au sol"
+const TREE_MAX_FALL_TIME := 6.0                     # sécurité : éclatement forcé
+const LOG_BURST_SPEED := 3.0                        # vitesse d'éjection des rondins à l'éclatement (m/s)
