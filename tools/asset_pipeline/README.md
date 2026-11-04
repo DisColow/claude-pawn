@@ -12,4 +12,4 @@ Testés avec Blender 5.2 et Python 3 + Pillow/NumPy/soundfile.
 | `fbx2glb.py` | Convertit un FBX Quaternius en GLB (matériaux opaques, mise à l'échelle). | `blender -b -P fbx2glb.py -- Axe.fbx assets/models/props/axe.glb 0.24` |
 
 La texture `assets/textures/wood_rings.png` est générée procéduralement (Pillow).
-Les sons d'arbre (`tree_creak.ogg`, `tree_crash.ogg`, `tree_fall_thud.ogg`) sont des extraits découpés des fichiers OpenGameArt listés dans `CREDITS.md`.
+Les sons d'arbre (`tree_crash.ogg`, `tree_fall_thud.ogg`) sont des extraits découpés des fichiers OpenGameArt listés dans `CREDITS.md`.
