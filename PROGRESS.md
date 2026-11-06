@@ -54,4 +54,4 @@
 | 2026-11-04 | `449d680` | Chute physique du tronc (abandonnée ensuite) |
 | 2026-11-05 | `f613912` | L'arbre explose en rondins à 0 PV |
 | 2026-11-06 | `9771656` | Arbres découpés : normales d'origine conservées (anneau / traînées corrigés) |
-| 2026-11-06 | (ce commit) | Ajout de `PROGRESS.md`, `CLAUDE.md`, `docs/SPECIFICATIONS.md`, tests dans `tests/`, scripts de téléchargement d'assets |
+| 2026-11-06 | `2a289bf` | Ajout de `PROGRESS.md`, `CLAUDE.md`, `docs/SPECIFICATIONS.md`, tests dans `tests/`, scripts de téléchargement d'assets |
