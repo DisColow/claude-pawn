@@ -47,7 +47,10 @@ scripts/
   props/       WoodLog
   vfx/         OneShotVFX, WoodChipsVFX, DustImpactVFX
   ui/          HUD
+tests/         scénarios automatiques avec captures (voir CLAUDE.md)
 tools/asset_pipeline/   scripts Blender/Python ayant produit les assets
+docs/          cahier des charges
+PROGRESS.md    état du projet et suite (reprise de session)
 ```
 
 ### Ajouter un arbre
