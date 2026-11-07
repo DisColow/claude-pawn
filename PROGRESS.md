@@ -63,4 +63,4 @@
 | 2026-11-07 | `4d82171` | Tous les arbres sont coupables : 2 espèces de plus découpées, 32 arbres de décor remplacés |
 | 2026-11-07 | `5d6faaa` | Souche sans collision après l'explosion en bûches |
 | 2026-11-07 | `5f4d16a` | Effet d'impact refait : éclats d'écorce discrets, à l'opposé du coup |
-| 2026-11-07 | (ce commit) | Forêt dense façon Warcraft 3 (504 arbres, clairière de terre battue), générateur de niveau |
+| 2026-11-07 | `29cf561` | Forêt dense façon Warcraft 3 (504 arbres, clairière de terre battue), générateur de niveau |
