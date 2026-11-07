@@ -1,7 +1,9 @@
 # Génère scenes/world/test_forest.tscn : une clairière de terre battue entourée d'une forêt dense
 # façon Warcraft 3 (sapins serrés aux couronnes jointives, quelques feuillus).
 # usage : python3 tools/level_gen/gen_test_forest.py   (depuis la racine du projet)
-import math, random
+# La scène est ensuite réenregistrée par l'éditeur Godot (tools/resave_with_editor.sh), sinon
+# l'éditeur de l'utilisateur la réécrit à l'ouverture et ses `git pull` partent en conflit.
+import math, random, shutil, subprocess
 
 random.seed(7)
 OUT = "scenes/world/test_forest.tscn"
@@ -182,3 +184,7 @@ scatter("Grass_2_B", 45, 9, 28, 0.8, 1.4)
 
 open(OUT, "w").write("\n".join(out))
 print("%d arbres, %d éléments de décor -> %s" % (len(trees), count, OUT))
+if shutil.which("godot") and shutil.which("xvfb-run"):
+    subprocess.run(["tools/resave_with_editor.sh"], check=True)
+else:
+    print("ATTENTION : lancer tools/resave_with_editor.sh avant de committer.")

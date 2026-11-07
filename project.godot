@@ -24,6 +24,7 @@ GameConfig="*res://scripts/core/game_config.gd"
 window/size/viewport_width=1600
 window/size/viewport_height=900
 
+
 [input]
 
 move_forward={
@@ -81,10 +82,9 @@ ui_release_mouse={
 
 [physics]
 
-common/physics_ticks_per_second=60
 3d/physics_engine="Jolt Physics"
 
 [rendering]
 
-anti_aliasing/quality/msaa_3d=2
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+anti_aliasing/quality/msaa_3d=2

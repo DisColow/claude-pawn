@@ -1,0 +1,10 @@
+# Fins de ligne LF partout (format attendu par Godot), quel que soit le réglage Git de Windows.
+* text=auto eol=lf
+
+# Fichiers binaires : jamais de conversion ni de fusion ligne à ligne.
+*.glb binary
+*.bin binary
+*.png binary
+*.ogg binary
+*.wav binary
+*.ttf binary

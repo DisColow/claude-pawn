@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bv1tsgoxmjhmb"
-path="res://.godot/imported/tree_1_b_trunk_wood_rings.png-03ff18939b7b610e7d5d6d1ca34d5ccb.ctex"
+path.s3tc="res://.godot/imported/tree_1_b_trunk_wood_rings.png-03ff18939b7b610e7d5d6d1ca34d5ccb.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "0501b6a3236543ec329c389e03b29d36"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/trees/tree_1_b_trunk_wood_rings.png"
-dest_files=["res://.godot/imported/tree_1_b_trunk_wood_rings.png-03ff18939b7b610e7d5d6d1ca34d5ccb.ctex"]
+dest_files=["res://.godot/imported/tree_1_b_trunk_wood_rings.png-03ff18939b7b610e7d5d6d1ca34d5ccb.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

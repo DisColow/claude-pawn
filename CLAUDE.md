@@ -20,7 +20,12 @@ Jeu FPS « péon orc » dans un RTS, **Godot 4.7.2** (Forward+, Jolt). Cahier de
 - Commentaires et docstrings en français, style `##` de GDScript. Typage statique partout (les avertissements GDScript doivent rester à zéro).
 - Couches physiques : 1 world, 2 player, 3 trees (valeur 4), 4 logs (valeur 8).
 - Éléments de la vue subjective : passer par `ZClip.apply()`.
-- Les scènes sont écrites à la main en `.tscn` : vérifier qu'elles se chargent (test `load_all`).
+- **Avant chaque commit qui touche des scènes, des assets ou `project.godot` : lancer `tools/resave_with_editor.sh`.**
+  Il fait passer le vrai éditeur Godot (réimport, détection 3D des textures, scènes réenregistrées avec
+  `uid`/`unique_id`). Sans ça, l'éditeur de l'utilisateur réécrit ces fichiers à l'ouverture et ses
+  `git pull` suivants partent en conflit (problème rencontré le 2026-11-07). Le script est idempotent.
+- Scènes écrites ou modifiées par script : vérifier qu'elles se chargent (test `load_all`), puis outil ci-dessus.
+- La forêt de test se régénère avec `tools/level_gen/gen_test_forest.py` (qui lance l'outil tout seul).
 
 ## Environnement cloud (à réinstaller dans un conteneur neuf)
 

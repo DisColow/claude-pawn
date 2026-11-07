@@ -1,6 +1,6 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://dbvbeejtky3eq"]
 
-[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://dg7yh85kyrllj" path="res://scripts/ui/hud.gd" id="1_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_bg"]
 bg_color = Color(0.05, 0.05, 0.04, 0.55)
@@ -16,10 +16,10 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="HUD" type="CanvasLayer"]
+[node name="HUD" type="CanvasLayer" unique_id=1974809072]
 script = ExtResource("1_script")
 
-[node name="Root" type="Control" parent="."]
+[node name="Root" type="Control" parent="." unique_id=1486152443]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,7 +28,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Crosshair" type="ColorRect" parent="Root"]
+[node name="Crosshair" type="ColorRect" parent="Root" unique_id=986865409]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -44,7 +44,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.8)
 
-[node name="StaminaBar" type="ProgressBar" parent="Root"]
+[node name="StaminaBar" type="ProgressBar" parent="Root" unique_id=2018505182]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 7
