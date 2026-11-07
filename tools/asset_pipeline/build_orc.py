@@ -1,7 +1,7 @@
 import bpy, sys
 argv = sys.argv[sys.argv.index("--")+1:]
 char, ual, texdir, out = argv[0], argv[1], argv[2], argv[3]
-KEEP = ["Idle_Loop","Walk_Loop","Jog_Fwd_Loop","Sprint_Loop","Jump_Start","Jump_Loop","Jump_Land","Sword_Attack","Sword_Idle","PickUp_Table","Interact"]
+KEEP = ["Idle_Loop","Walk_Loop","Jog_Fwd_Loop","Sprint_Loop","Jump_Start","Jump_Loop","Jump_Land","Sword_Attack","Sword_Idle","PickUp_Table","Interact","Crouch_Idle_Loop","Crouch_Fwd_Loop"]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=char)
 char_objs = set(bpy.context.scene.objects)

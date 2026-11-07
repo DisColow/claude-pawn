@@ -10,6 +10,7 @@
 [ext_resource type="AudioStream" uid="uid://tujijd8pbvf4" path="res://assets/sounds/footsteps/grass_3.ogg" id="8_fs3"]
 [ext_resource type="AudioStream" uid="uid://cegnqts3bgxs6" path="res://assets/sounds/footsteps/grass_4.ogg" id="9_fs4"]
 [ext_resource type="AudioStream" uid="uid://bser7fp3ncpuh" path="res://assets/sounds/axe/axe_chop.ogg" id="10_chop"]
+[ext_resource type="Script" uid="uid://c3lkx2jpna1db" path="res://scripts/player/log_carrier.gd" id="11_carrier"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.4
@@ -52,3 +53,6 @@ max_distance = 25.0
 [node name="AxeAudio" type="AudioStreamPlayer3D" parent="." unique_id=1239930375]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, -0.6)
 max_distance = 30.0
+
+[node name="LogCarrier" type="Node3D" parent="." unique_id=1156985236]
+script = ExtResource("11_carrier")

@@ -46,6 +46,8 @@ Scripts dans `tests/` (en-tête de chaque fichier = usage) :
 - `play_test.gd` — scénario en jeu avec captures : `chop`, `look`, `tp`.
 - `tree_test.gd` — un arbre isolé frappé 4 fois.
 - `move_test.gd` — vitesses de marche/sprint, endurance, saut.
+- `pickup_test.gd` — ramassage des bûches (E) : séquence animée, pile 1→10, ralentissement, charge pleine.
+- `props_test.gd` — rocher bloquant, buisson traversable qui froisse.
 - `preview.gd` — aperçu de modèles/scènes.
 
 Écrire les captures dans le scratchpad et **les regarder** (Read) avant de conclure. Ne jamais affirmer qu'un son est bon : il ne peut pas être écouté ici.

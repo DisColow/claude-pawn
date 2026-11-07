@@ -6,8 +6,8 @@
 ## Où on en est
 
 - **Branche de travail** : `feature/decoupe-bois` (seule branche du dépôt `DisColow/claude-pawn` ; `main` n'existe pas encore — décision en attente, voir plus bas).
-- **Étape en cours** : MVP « découpe de bois » (§3.1 de la spec) **terminée et validée par l'utilisateur** en jeu (il teste sous Windows via le ZIP de la branche).
-- **Prochaine étape probable** : §3.2 portage des rondins sur l'épaule (ramassage, pile sur l'épaule gauche 1→10, coupe continue, pénalité de vitesse).
+- **Fait** : §3.1 découpe de bois (validée par l'utilisateur) et §3.2 ramassage/portage des bûches (à valider en jeu par l'utilisateur).
+- **Prochaine étape probable** : §3.3 dépôt au camp (zone de stockage, E pour décharger, stock global, pile du camp qui grandit).
 
 ## Fait
 
@@ -15,10 +15,11 @@
 |---|---|---|
 | Config | Toutes les valeurs d'équilibrage / game feel (autoload `GameConfig`) | `scripts/core/game_config.gd` |
 | Arbre | 100 PV, 4 coups (25 dmg), petits éclats d'écorce éjectés à l'opposé du mouvement de la hache (direction transmise par `AxeController`), oscillation élastique (ressort amorti), son d'impact aléatoire, hit-stop. À 0 PV : **le tronc explose en 4 rondins** projetés à l'opposé du joueur + poussière/feuilles + fracas + secousse. La souche reste, **sans collision** (traversable). Charnière et collisions déduites des meshes. | `scripts/trees/choppable_tree.gd`, `scenes/trees/*.tscn` |
-| Rondins | `WoodLog` (RigidBody3D, couche 4 « logs »), son au choc, groupe `wood_logs`. Pas encore ramassables. | `scripts/props/wood_log.gd`, `scenes/props/wood_log.tscn` |
+| Rondins | `WoodLog` (RigidBody3D, couche 4 « logs »), son au choc, groupe `wood_logs`. | `scripts/props/wood_log.gd`, `scenes/props/wood_log.tscn` |
 | VFX | `WoodChipsVFX` (7 éclats d'écorce discrets), `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`) | `scripts/vfx/`, `scenes/vfx/` |
 | Joueur | Orc avec **oreilles pointues et défenses** (`OrcHeadParts`, modèles CC-BY greffés sur l'os Head ; visibles dans l'ombre, la tête étant masquée en vue subjective). CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
-| HUD | Réticule + jauge d'endurance | `scenes/ui/hud.tscn` |
+| Ramassage / portage | `LogCarrier` (enfant du joueur) : viser une bûche (rayon caméra, 2,3 m) → « [E] Ramasser ». Séquence de 1,1 s : pas vers la bûche, accroupissement (`Crouch_Idle`), regard attiré vers elle, **bras gauche en IK** (2e `TwoBoneIK3D`) qui saisit l'extrémité la plus proche, bûche hissée en arc par la gauche jusqu'à la pile. Pile sur l'épaule gauche (4+4+2, bûches à 50 %), z-clip + copie d'ombre, main gauche qui la tient. Immobile et sans coup de hache pendant le ramassage ; hache utilisable ensuite. Capacité 10, « Charge pleine », pénalité -35 %. | `scripts/player/log_carrier.gd`, `first_person_body.gd` |
+| HUD | Réticule, jauge d'endurance, invite de ramassage, compteur « Bois : n / 10 » | `scenes/ui/hud.tscn` |
 | Décor | **Rochers solides** (`SolidProp` : collision convexe calculée depuis le mesh, en cache) ; **buissons traversables qui froissent** (`RustlingBush` : son de feuilles + frémissement, répété tant qu'on s'y déplace). | `scripts/props/`, `scenes/props/` |
 | Monde | Forêt de test **façon Warcraft 3** générée par `tools/level_gen/gen_test_forest.py` : clairière de terre battue (décalque) au centre, **504 arbres coupables** serrés (grille perturbée, pas 2,6 m ; 85 % de sapins `tree_4_c`), rochers solides, buissons qui froissent, herbe ; soleil haut (70°) dans le dos du joueur, clairière ensoleillée. Rayons de tronc mis en cache par modèle, oscillation calculée seulement quand un arbre bouge. | `scenes/world/test_forest.tscn`, `tools/level_gen/` |
 | Assets | KayKit, Quaternius, Kenney, OpenGameArt (CC0 sauf `tree_crash.ogg` CC-BY 3.0) | `CREDITS.md`, `tools/asset_pipeline/` |
@@ -65,3 +66,4 @@
 | 2026-11-07 | `29cf561` | Forêt dense façon Warcraft 3 (504 arbres, clairière de terre battue), générateur de niveau |
 | 2026-11-07 | `9ac9724` | `git pull` réparé : scènes, imports et `project.godot` au format de l'éditeur, `.gitattributes`, outil `tools/resave_with_editor.sh` |
 | 2026-11-07 | `c7de86d` | Rochers solides, buissons qui froissent, orc avec oreilles pointues et défenses, soleil corrigé |
+| 2026-11-07 | (ce commit) | Ramassage des bûches (E) avec animation en body awareness, pile sur l'épaule gauche (§3.2) |

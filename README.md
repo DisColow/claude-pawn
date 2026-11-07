@@ -9,7 +9,7 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 | Étape | Statut |
 |---|---|
 | Découpe de bois (§3.1 de la spec) + joueur FPS minimal | ✅ |
-| Portage des rondins sur l'épaule (§3.2) | à venir |
+| Ramassage (E) et portage des bûches sur l'épaule (§3.2) | ✅ |
 | Dépôt au camp (§3.3) | à venir |
 
 ## Lancer
@@ -23,6 +23,7 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 | Sprint (consomme l'endurance) | Maj |
 | Sauter | Espace |
 | Coup de hache | Clic gauche (maintenir = coups enchaînés) |
+| Ramasser une bûche (en la visant) | E |
 | Libérer / recapturer la souris | Échap / clic |
 
 ## Ce qui est implémenté
@@ -30,6 +31,8 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 **Coupe** — 4 coups (`AXE_DAMAGE` 25 / `TREE_MAX_HEALTH` 100) : petits éclats d'écorce projetés à l'opposé du coup (`WoodChipsVFX`), oscillation élastique du tronc (ressort amorti), secousse d'écran, son d'impact, micro-pause à l'impact (*hit-stop*).
 
 **Explosion en rondins** — à zéro point de vie, le tronc explose sur place : **4 rondins physiques** (`WoodLog`) sont projetés depuis le fût, surtout dans la direction du dernier coup, avec éclats, nuages de poussière et de feuilles (`DustImpactVFX`), fracas et secousse d'écran atténuée par la distance. La souche reste en place, sans collision.
+
+**Ramassage** — viser une bûche affiche « [E] Ramasser ». L'orc fait un pas vers elle, s'accroupit en baissant le regard, la saisit de la main gauche (IK) et la hisse en arc jusqu'à son épaule gauche : la pile grossit de 1 à 10 (4 + 4 + 2) en périphérie gauche de l'écran, tenue par la main gauche. La hache reste utilisable, la charge ralentit (-35 % à 10), « Charge pleine » à 10/10.
 
 **Joueur** — corps d'orc complet animé (idle/marche/course/sprint/saut), visible en regardant vers le bas sans masquer le sol ; ombre portée complète (tête et hache comprises) ; bruits de pas cadencés ; endurance du sprint ; pénalité de charge déjà câblée (`get_carry_speed_multiplier`, -35 % à 10 rondins). Le bras droit tient la hache par IK, le coup est animé procéduralement en espace caméra. Bras, hache et corps utilisent le **Z-Clip Depth Scaling** (`use_z_clip_scale`, `z_clip_scale = 0.1`).
 

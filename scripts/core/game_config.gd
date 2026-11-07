@@ -25,6 +25,13 @@ const BUSH_SHAKE_ANGLE := 0.09          # inclinaison du frémissement (rad)
 # --- Transport de bois ------------------------------------------------------
 const BASE_WOOD_CAPACITY := 10
 const MAX_CARRY_SPEED_PENALTY := 0.35
+const PICKUP_RANGE := 2.3               # distance max (depuis la caméra) pour ramasser une bûche (m)
+const PICKUP_DURATION := 1.1            # durée totale du ramassage (s)
+const PICKUP_GRAB_TIME := 0.5           # instant où la main saisit la bûche (s)
+const PICKUP_CROUCH_DROP := 0.62        # descente de la caméra accroupi (m)
+const PICKUP_LOOK_BLEND := 0.65         # part du regard attirée vers la bûche pendant le ramassage
+const CARRIED_LOG_SCALE := 0.5          # taille des bûches portées sur l'épaule (lisibilité de la vue)
+const PICKUP_REACH := 0.55              # distance horizontale pieds -> bûche à laquelle l'orc s'avance (m)
 
 # --- Arbres -----------------------------------------------------------------
 const TREE_MAX_HEALTH := 100.0

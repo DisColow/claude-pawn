@@ -4,12 +4,16 @@ extends Node3D
 ## - corps complet animé (idle / marche / course / sprint / saut), visible en regardant vers le bas ;
 ## - tête masquée côté caméra, mais présente dans l'ombre portée (squelette d'ombre dédié) ;
 ## - bras droit piloté par IK pour tenir la hache animée en espace caméra ;
+## - bras gauche piloté par IK (dosable) pour ramasser les bûches et tenir la pile sur l'épaule ;
+## - accroupissement dosable (animation Crouch_Idle) pour le ramassage ;
 ## - tous les éléments de la vue subjective utilisent le Z-Clip Depth Scaling.
 
 ## Points de la blend space de locomotion (vitesse au sol en m/s -> animation).
 const LOCOMOTION_POINTS := {"Idle": 0.0, "Walk": 1.8, "Jog_Fwd": 5.2, "Sprint": 8.2}
 const AIR_ANIMATION := "Jump"
-## Pose de poing fermé (main droite) empruntée à l'animation d'épée.
+const CROUCH_ANIMATION := "Crouch_Idle"
+## Pose de poing fermé empruntée à l'animation d'épée (main droite en permanence, main gauche
+## quand elle tient quelque chose).
 const GRIP_ANIMATION := "Sword_Idle"
 const GRIP_FINGERS := ["index", "middle", "ring", "pinky", "thumb"]
 
@@ -41,7 +45,11 @@ var _arm_ik: TwoBoneIK3D
 var _finalize: FpFinalizeModifier
 var _hand_target: Node3D
 var _elbow_pole: Node3D
+var _left_arm_ik: TwoBoneIK3D
+var _left_hand_target: Node3D
+var _left_elbow_pole: Node3D
 var _shoulder_bone := -1
+var _left_shoulder_bone := -1
 var _air_blend := 0.0
 var _base_position := Vector3.ZERO
 
@@ -81,11 +89,18 @@ func _ready() -> void:
 	_elbow_pole = Node3D.new()
 	_elbow_pole.name = "ElbowPole"
 	add_child(_elbow_pole)
+	_left_hand_target = Node3D.new()
+	_left_hand_target.name = "LeftHandTarget"
+	add_child(_left_hand_target)
+	_left_elbow_pole = Node3D.new()
+	_left_elbow_pole.name = "LeftElbowPole"
+	add_child(_left_elbow_pole)
 
 	_setup_modifiers(shadow_skeleton)
 	_setup_animation_tree()
 
 	_shoulder_bone = skeleton.find_bone("upperarm_r")
+	_left_shoulder_bone = skeleton.find_bone("upperarm_l")
 	var elbow := skeleton.find_bone("lowerarm_r")
 	var hand := skeleton.find_bone("hand_r")
 	arm_length = (skeleton.get_bone_global_rest(elbow).origin.distance_to(skeleton.get_bone_global_rest(_shoulder_bone).origin)
@@ -100,6 +115,26 @@ func hold_axe_at(axe_global: Transform3D, pole_global: Vector3) -> void:
 
 func get_shoulder_position() -> Vector3:
 	return skeleton.global_transform * skeleton.get_bone_global_pose(_shoulder_bone).origin
+
+
+## Épaule gauche animée (avant IK), dans le repère de ce nœud : sert d'appui à la pile de bûches.
+func get_left_shoulder_local() -> Vector3:
+	return to_local(skeleton.global_transform * skeleton.get_bone_global_pose(_left_shoulder_bone).origin)
+
+
+## Bras gauche : la main va vers `hand_global` (position), le coude vers `pole_global`.
+## `weight` dose l'IK (0 = bras animé normalement) et ferme le poing gauche.
+func hold_left_hand_at(hand_global: Vector3, pole_global: Vector3, weight: float) -> void:
+	_left_hand_target.global_position = hand_global
+	_left_elbow_pole.global_position = pole_global
+	_left_arm_ik.influence = clampf(weight, 0.0, 1.0)
+	_left_arm_ik.active = weight > 0.001
+	_anim_tree.set("parameters/grip_left/blend_amount", clampf(weight, 0.0, 1.0))
+
+
+## Accroupissement (0 = debout, 1 = accroupi au sol).
+func set_crouch(amount: float) -> void:
+	_anim_tree.set("parameters/crouch/blend_amount", clampf(amount, 0.0, 1.0))
 
 
 ## Met à jour la locomotion. `speed` = vitesse horizontale signée (négative en marche arrière).
@@ -133,6 +168,18 @@ func _setup_modifiers(shadow_skeleton: Skeleton3D) -> void:
 	_arm_ik.set_target_node(0, _arm_ik.get_path_to(_hand_target))
 	_arm_ik.set_pole_node(0, _arm_ik.get_path_to(_elbow_pole))
 
+	_left_arm_ik = TwoBoneIK3D.new()
+	_left_arm_ik.name = "LeftArmIK"
+	skeleton.add_child(_left_arm_ik)
+	_left_arm_ik.setting_count = 1
+	_left_arm_ik.set_root_bone_name(0, "upperarm_l")
+	_left_arm_ik.set_middle_bone_name(0, "lowerarm_l")
+	_left_arm_ik.set_end_bone_name(0, "hand_l")
+	_left_arm_ik.set_target_node(0, _left_arm_ik.get_path_to(_left_hand_target))
+	_left_arm_ik.set_pole_node(0, _left_arm_ik.get_path_to(_left_elbow_pole))
+	_left_arm_ik.influence = 0.0
+	_left_arm_ik.active = false
+
 	_finalize = FpFinalizeModifier.new()
 	_finalize.name = "Finalize"
 	_finalize.hand_target = _hand_target
@@ -161,24 +208,32 @@ func _setup_animation_tree() -> void:
 	var jump := AnimationNodeAnimation.new()
 	jump.animation = AIR_ANIMATION
 	root.add_node("jump", jump)
+	var crouch_pose := AnimationNodeAnimation.new()
+	crouch_pose.animation = CROUCH_ANIMATION
+	root.add_node("crouch_pose", crouch_pose)
+	var crouch := AnimationNodeBlend2.new()
+	root.add_node("crouch", crouch)
+	root.connect_node("crouch", 0, "direction")
+	root.connect_node("crouch", 1, "crouch_pose")
+
 	var air := AnimationNodeBlend2.new()
 	root.add_node("air", air)
-	root.connect_node("air", 0, "direction")
+	root.connect_node("air", 0, "crouch")
 	root.connect_node("air", 1, "jump")
 
 	var grip_pose := AnimationNodeAnimation.new()
 	grip_pose.animation = GRIP_ANIMATION
 	root.add_node("grip_pose", grip_pose)
-	var grip := AnimationNodeBlend2.new()
-	grip.filter_enabled = true
-	for bone in skeleton.get_bone_count():
-		var bone_name := skeleton.get_bone_name(bone)
-		if bone_name.ends_with("_r") and GRIP_FINGERS.any(func(f: String) -> bool: return bone_name.begins_with(f)):
-			grip.set_filter_path(NodePath("%s:%s" % [skeleton_path, bone_name]), true)
-	root.add_node("grip", grip)
+	root.add_node("grip", _finger_filter(skeleton_path, "_r"))
 	root.connect_node("grip", 0, "air")
 	root.connect_node("grip", 1, "grip_pose")
-	root.connect_node("output", 0, "grip")
+	var grip_pose_left := AnimationNodeAnimation.new()
+	grip_pose_left.animation = GRIP_ANIMATION
+	root.add_node("grip_pose_left", grip_pose_left)
+	root.add_node("grip_left", _finger_filter(skeleton_path, "_l"))
+	root.connect_node("grip_left", 0, "grip")
+	root.connect_node("grip_left", 1, "grip_pose_left")
+	root.connect_node("output", 0, "grip_left")
 
 	_anim_tree = AnimationTree.new()
 	_anim_tree.name = "AnimationTree"
@@ -187,6 +242,17 @@ func _setup_animation_tree() -> void:
 	_anim_tree.tree_root = root
 	_anim_tree.set("parameters/grip/blend_amount", 1.0)
 	_anim_tree.active = true
+
+
+## Blend2 n'agissant que sur les doigts d'une main (`side` = "_r" ou "_l").
+func _finger_filter(skeleton_path: String, side: String) -> AnimationNodeBlend2:
+	var blend := AnimationNodeBlend2.new()
+	blend.filter_enabled = true
+	for bone in skeleton.get_bone_count():
+		var bone_name := skeleton.get_bone_name(bone)
+		if bone_name.ends_with(side) and GRIP_FINGERS.any(func(f: String) -> bool: return bone_name.begins_with(f)):
+			blend.set_filter_path(NodePath("%s:%s" % [skeleton_path, bone_name]), true)
+	return blend
 
 
 func _attach_axe(target_skeleton: Skeleton3D, shadow_only: bool) -> void:

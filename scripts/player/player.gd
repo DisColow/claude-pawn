@@ -1,13 +1,14 @@
 class_name Player
 extends CharacterBody3D
-## Travailleur orc en vue FPS : déplacement (ZQSD/WASD), sprint avec endurance, saut, coup de hache.
+## Travailleur orc en vue FPS : déplacement (ZQSD/WASD), sprint avec endurance, saut, coup de hache,
+## ramassage des bûches (E, via LogCarrier).
 
 signal stamina_changed(value: float, max_value: float)
 
 const PITCH_LIMIT := deg_to_rad(85.0)
 const FOOTSTEP_DISTANCE := 1.6
 
-## Rondins portés (le portage sur l'épaule arrive à l'étape suivante ; la pénalité est déjà câblée).
+## Rondins portés sur l'épaule (tenu à jour par LogCarrier) : ralentit le joueur.
 var carried_logs := 0
 var stamina := GameConfig.MAX_STAMINA
 
@@ -16,11 +17,13 @@ var _sprinting := false
 var _stamina_regen_delay := 0.0
 var _footstep_accumulator := 0.0
 var _was_on_floor := true
+var _head_height := 0.0
 
 @onready var head: Node3D = $Head
 @onready var camera: CameraShake = $Head/Camera3D
 @onready var body: FirstPersonBody = $Body
 @onready var axe: AxeController = $Head/Camera3D/AxeRig
+@onready var carrier: LogCarrier = $LogCarrier
 @onready var _footsteps: AudioStreamPlayer3D = $FootstepAudio
 @onready var _axe_audio: AudioStreamPlayer3D = $AxeAudio
 
@@ -30,6 +33,7 @@ var _was_on_floor := true
 
 func _ready() -> void:
 	add_to_group("player")
+	_head_height = head.position.y
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	axe.hit_landed.connect(_on_axe_hit)
 
@@ -38,7 +42,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * GameConfig.MOUSE_SENSITIVITY)
 		_pitch = clampf(_pitch - event.relative.y * GameConfig.MOUSE_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT)
-		head.rotation.x = _pitch
 	elif event.is_action_pressed("ui_release_mouse"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
@@ -46,11 +49,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## Inclinaison du regard choisie par le joueur (sans l'attraction vers une bûche ramassée).
+func look_pitch() -> float:
+	return _pitch
+
+
 func _physics_process(delta: float) -> void:
-	if Input.is_action_pressed("attack") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	var busy := carrier.is_busy()
+	if not busy and Input.is_action_pressed("attack") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		axe.request_swing()
 
-	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	# Ramassage en cours : immobile, la tête descend avec l'accroupissement et suit la bûche.
+	var input := Vector2.ZERO if busy else Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	carried_logs = carrier.count
+	head.position.y = _head_height - GameConfig.PICKUP_CROUCH_DROP * carrier.crouch
+	head.rotation.x = _pitch + carrier.look_offset
 	var wish := (global_basis * Vector3(input.x, 0.0, input.y))
 	wish.y = 0.0
 	wish = wish.normalized() * minf(input.length(), 1.0)
@@ -60,11 +73,13 @@ func _physics_process(delta: float) -> void:
 
 	if not is_on_floor():
 		velocity += get_gravity() * delta
-	elif Input.is_action_just_pressed("jump"):
+	elif not busy and Input.is_action_just_pressed("jump"):
 		velocity.y = GameConfig.JUMP_VELOCITY
 
 	var acceleration := GameConfig.GROUND_ACCELERATION if is_on_floor() else GameConfig.AIR_ACCELERATION
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z).move_toward(wish * target_speed, acceleration * target_speed * delta)
+	if busy:
+		horizontal = carrier.step_velocity  # pas vers la bûche pendant le ramassage
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 	move_and_slide()
@@ -100,7 +115,8 @@ func _update_body(delta: float) -> void:
 	var local_velocity := global_basis.inverse() * velocity
 	var horizontal_speed := Vector2(local_velocity.x, local_velocity.z).length()
 	var signed_speed := horizontal_speed * (-1.0 if local_velocity.z > 0.5 else 1.0)
-	body.look_pitch = _pitch
+	body.look_pitch = _pitch + carrier.look_offset
+	body.set_crouch(carrier.crouch)
 	body.update_locomotion(signed_speed, is_on_floor(), delta)
 	axe.set_walk_bob(clampf(horizontal_speed / GameConfig.SPRINT_SPEED, 0.0, 1.0) if is_on_floor() else 0.0)
 
