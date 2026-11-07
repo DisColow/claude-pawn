@@ -49,6 +49,7 @@ scripts/
   ui/          HUD
 tests/         scénarios automatiques avec captures (voir CLAUDE.md)
 tools/asset_pipeline/   scripts Blender/Python ayant produit les assets
+tools/level_gen/        générateur de la forêt de test (+ texture de terre battue)
 docs/          cahier des charges
 PROGRESS.md    état du projet et suite (reprise de session)
 ```

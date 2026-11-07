@@ -1,5 +1,6 @@
 extends SceneTree
 # Locomotion : marche, sprint/endurance, saut, marche arrière ; affiche les vitesses mesurées.
+# Terrain plat dédié (la forêt de test est trop dense pour courir 45 m en ligne droite).
 # usage : xvfb-run -a godot --path . -s res://tests/move_test.gd -- prefixe
 var out := ""
 func _init() -> void:
@@ -11,11 +12,19 @@ func frames(n: int) -> void:
 	for i in n: await physics_frame
 func run() -> void:
 	out = OS.get_cmdline_user_args()[0]
-	var world: Node = load("res://scenes/world/test_forest.tscn").instantiate()
-	get_root().add_child(world)
-	var player: Player = world.get_node("Player")
+	var world := Node3D.new(); get_root().add_child(world)
+	var env := WorldEnvironment.new(); env.environment = Environment.new()
+	env.environment.background_mode = Environment.BG_COLOR; env.environment.background_color = Color(0.55, 0.7, 0.85)
+	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.environment.ambient_light_color = Color(0.6, 0.6, 0.65)
+	world.add_child(env)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-50, 35, 0); sun.shadow_enabled = true; world.add_child(sun)
+	var ground := StaticBody3D.new(); var gs := CollisionShape3D.new(); var box := BoxShape3D.new(); box.size = Vector3(200, 1, 200)
+	gs.shape = box; gs.position.y = -0.5; ground.add_child(gs)
+	var gm := MeshInstance3D.new(); var pm := PlaneMesh.new(); pm.size = Vector2(200, 200); gm.mesh = pm; ground.add_child(gm); world.add_child(ground)
+	var player: Player = load("res://scenes/player/player.tscn").instantiate(); world.add_child(player)
+	world.add_child(load("res://scenes/ui/hud.tscn").instantiate())
 	await frames(5)
-	player.global_position = Vector3(14, 0, 18); player.rotation.y = 0.0
+	player.global_position = Vector3(0, 0, 40); player.rotation.y = 0.0
 	player._pitch = deg_to_rad(-45); player.head.rotation.x = player._pitch
 	await frames(10)
 	var p0 := player.global_position

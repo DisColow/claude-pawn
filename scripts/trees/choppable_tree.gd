@@ -30,6 +30,10 @@ var _sway := Vector3.ZERO           # vecteur de rotation (axe * angle) dans le 
 var _sway_velocity := Vector3.ZERO
 var _trunk_length := 4.0            # sommet de la souche -> sommet du tronc
 
+## Rayons mesurés par modèle et tranche de hauteur : toutes les instances d'une espèce partagent
+## le même résultat, la forêt se charge sans reparcourir les sommets de chaque arbre.
+static var _radius_cache: Dictionary = {}
+
 @onready var _trunk_pivot: Node3D = $TrunkPivot
 @onready var _trunk_collision: CollisionShape3D = $TrunkCollision
 @onready var _stump_collision: CollisionShape3D = $StumpCollision
@@ -41,6 +45,8 @@ func _ready() -> void:
 	add_to_group("choppable_trees")
 	_setup_hinge()
 	_setup_collisions()
+	# L'oscillation n'est calculée que pendant qu'elle a lieu (des centaines d'arbres au repos).
+	set_physics_process(false)
 
 
 ## Point d'entrée des dégâts. `from_position` = position de l'attaquant (oriente l'oscillation et l'explosion),
@@ -55,6 +61,7 @@ func take_hit(damage: float, hit_position: Vector3, hit_normal: Vector3, from_po
 	var push := _horizontal_direction(hit_position - from_position)
 	var sway_axis := Vector3.UP.cross(push).normalized()
 	_sway_velocity += global_basis.inverse() * sway_axis * GameConfig.TREE_SWAY_IMPULSE
+	set_physics_process(true)
 	_spawn_chips(hit_position, _chip_direction(hit_normal, swing_direction))
 	_play_random(_hit_audio, hit_sounds, 0.9, 1.1)
 	chopped.emit(hit_count, health)
@@ -64,9 +71,16 @@ func take_hit(damage: float, hit_position: Vector3, hit_normal: Vector3, from_po
 
 
 func _physics_process(delta: float) -> void:
-	if state == State.STANDING:
-		_update_sway(delta)
-		_trunk_pivot.basis = _rotation_from_vector(_sway)
+	if state != State.STANDING:
+		set_physics_process(false)
+		return
+	_update_sway(delta)
+	_trunk_pivot.basis = _rotation_from_vector(_sway)
+	if _sway.length() < 0.0001 and _sway_velocity.length() < 0.0001:
+		_sway = Vector3.ZERO
+		_sway_velocity = Vector3.ZERO
+		_trunk_pivot.basis = Basis.IDENTITY
+		set_physics_process(false)
 
 
 # --- Oscillation élastique ----------------------------------------------------------------
@@ -162,6 +176,13 @@ func _setup_collisions() -> void:
 
 ## Rayon moyen des sommets du mesh dont la hauteur (repère de l'arbre) est dans [min_y, max_y].
 func _radius_between(mesh_instance: MeshInstance3D, min_y: float, max_y: float, fallback: float) -> float:
+	var key := "%d|%.3f|%.3f" % [mesh_instance.mesh.get_instance_id(), min_y, max_y]
+	if not _radius_cache.has(key):
+		_radius_cache[key] = _measure_radius(mesh_instance, min_y, max_y, fallback)
+	return _radius_cache[key]
+
+
+func _measure_radius(mesh_instance: MeshInstance3D, min_y: float, max_y: float, fallback: float) -> float:
 	var to_tree := global_transform.affine_inverse() * mesh_instance.global_transform
 	var axis := Vector2(_trunk_pivot.position.x, _trunk_pivot.position.z)
 	var total := 0.0

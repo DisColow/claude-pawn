@@ -13,6 +13,6 @@ Tous les assets tiers sont sous licence libre. Les fichiers ont été modifiés 
 | Particle Pack — fumée, terre | `assets/vfx/*.png` | [Kenney](https://kenney.nl/assets/particle-pack) | CC0 |
 | tree chop fall thud | `assets/sounds/tree/tree_fall_thud.ogg` | kheetor — [OpenGameArt](https://opengameart.org/content/tree-chop-fall-thud) | CC0 |
 | Tree Falling (Yo Frankie!) | `assets/sounds/tree/tree_crash.ogg` | Blender Foundation / projet *Yo Frankie!*, publié par Lamoot — [OpenGameArt](https://opengameart.org/content/tree-falling-yo-frankie) | **CC-BY 3.0** — attribution obligatoire |
-| Texture de cernes, rondin | `assets/textures/wood_rings.png`, `assets/models/props/wood_log.glb` | Générés pour PAWN | — |
+| Texture de cernes, rondin, terre battue | `assets/textures/wood_rings.png`, `assets/models/props/wood_log.glb`, `assets/textures/dirt_clearing.png` | Générés pour PAWN | — |
 
 > Seul le son *Yo Frankie!* (CC-BY 3.0) impose une mention dans les crédits du jeu ; tout le reste est CC0.
