@@ -1,7 +1,7 @@
 # PAWN — Suivi de progression
 
 > Fichier de reprise : l'état du projet, les décisions prises et la suite. Cahier des charges : `docs/SPECIFICATIONS.md`.
-> **À tenir à jour à chaque étape terminée** (voir `CLAUDE.md`). Dernière mise à jour : 2026-11-06.
+> **À tenir à jour à chaque étape terminée** (voir `CLAUDE.md`). Dernière mise à jour : 2026-11-07.
 
 ## Où on en est
 
@@ -19,7 +19,7 @@
 | VFX | `WoodChipsVFX`, `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`) | `scripts/vfx/`, `scenes/vfx/` |
 | Joueur | CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
 | HUD | Réticule + jauge d'endurance | `scenes/ui/hud.tscn` |
-| Monde | Clairière de test : 12 arbres coupables + décor | `scenes/world/test_forest.tscn` |
+| Monde | Clairière de test : **44 arbres, tous coupables** (5 espèces KayKit : `tree_1_b`, `tree_2_c`, `tree_3_b`, `tree_2_e`, `tree_4_c`, échelle 1 à 1,4) + rochers, buissons, herbe (décor sans collision) | `scenes/world/test_forest.tscn` |
 | Assets | KayKit, Quaternius, Kenney, OpenGameArt (CC0 sauf `tree_crash.ogg` CC-BY 3.0) | `CREDITS.md`, `tools/asset_pipeline/` |
 
 ## Décisions prises (ne pas re-discuter sans l'utilisateur)
@@ -29,12 +29,13 @@
 - **Plus de chute d'arbre** : l'utilisateur a essayé la chute scriptée puis la chute physique (le penchant naturel l'emportait sur la direction du coup) et a choisi **l'explosion en rondins à 0 PV**.
 - **Vue FPS « true first person »** : vrai corps animé + IK pour le bras, plutôt qu'un viewmodel séparé.
 - Touches **physiques** (ZQSD sur AZERTY = WASD).
+- **Tous les arbres sont coupables** (plus d'arbres de décor), demandé le 2026-11-07.
 - Les arbres sont découpés hors-ligne (Blender) en souche + tronc ; les normales d'origine sont conservées (sinon anneau/traînées visibles à la jonction).
 
 ## Questions ouvertes (à poser à l'utilisateur)
 
 1. Créer `main` à partir de la branche actuelle et travailler ensuite par branches de fonctionnalité + PR ?
-2. Arbres de décor (32), rochers et buissons : **sans collision** aujourd'hui. Les rendre solides ? coupables ?
+2. Rochers (15) et buissons (20) : **sans collision** aujourd'hui (on les traverse). Les rendre solides ?
 3. Ramassage des rondins : automatique en marchant dessus, ou touche `E` ?
 4. Style de l'orc (base humaine recolorée, sans crocs/oreilles) : OK ?
 
@@ -55,3 +56,4 @@
 | 2026-11-05 | `f613912` | L'arbre explose en rondins à 0 PV |
 | 2026-11-06 | `9771656` | Arbres découpés : normales d'origine conservées (anneau / traînées corrigés) |
 | 2026-11-06 | `2a289bf` | Ajout de `PROGRESS.md`, `CLAUDE.md`, `docs/SPECIFICATIONS.md`, tests dans `tests/`, scripts de téléchargement d'assets |
+| 2026-11-07 | (ce commit) | Tous les arbres sont coupables : 2 espèces de plus découpées, 32 arbres de décor remplacés |
