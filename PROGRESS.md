@@ -14,9 +14,9 @@
 | Domaine | Contenu | Fichiers clés |
 |---|---|---|
 | Config | Toutes les valeurs d'équilibrage / game feel (autoload `GameConfig`) | `scripts/core/game_config.gd` |
-| Arbre | 100 PV, 4 coups (25 dmg), éclats + sciure, oscillation élastique (ressort amorti), son d'impact aléatoire, hit-stop. À 0 PV : **le tronc explose en 4 rondins** projetés à l'opposé du joueur + poussière/feuilles + fracas + secousse. La souche reste, **sans collision** (traversable). Charnière et collisions déduites des meshes. | `scripts/trees/choppable_tree.gd`, `scenes/trees/*.tscn` |
+| Arbre | 100 PV, 4 coups (25 dmg), petits éclats d'écorce éjectés à l'opposé du mouvement de la hache (direction transmise par `AxeController`), oscillation élastique (ressort amorti), son d'impact aléatoire, hit-stop. À 0 PV : **le tronc explose en 4 rondins** projetés à l'opposé du joueur + poussière/feuilles + fracas + secousse. La souche reste, **sans collision** (traversable). Charnière et collisions déduites des meshes. | `scripts/trees/choppable_tree.gd`, `scenes/trees/*.tscn` |
 | Rondins | `WoodLog` (RigidBody3D, couche 4 « logs »), son au choc, groupe `wood_logs`. Pas encore ramassables. | `scripts/props/wood_log.gd`, `scenes/props/wood_log.tscn` |
-| VFX | `WoodChipsVFX`, `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`) | `scripts/vfx/`, `scenes/vfx/` |
+| VFX | `WoodChipsVFX` (7 éclats d'écorce discrets), `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`) | `scripts/vfx/`, `scenes/vfx/` |
 | Joueur | CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
 | HUD | Réticule + jauge d'endurance | `scenes/ui/hud.tscn` |
 | Monde | Clairière de test : **44 arbres, tous coupables** (5 espèces KayKit : `tree_1_b`, `tree_2_c`, `tree_3_b`, `tree_2_e`, `tree_4_c`, échelle 1 à 1,4) + rochers, buissons, herbe (décor sans collision) | `scenes/world/test_forest.tscn` |
@@ -29,6 +29,7 @@
 - **Plus de chute d'arbre** : l'utilisateur a essayé la chute scriptée puis la chute physique (le penchant naturel l'emportait sur la direction du coup) et a choisi **l'explosion en rondins à 0 PV**.
 - **Vue FPS « true first person »** : vrai corps animé + IK pour le bras, plutôt qu'un viewmodel séparé.
 - Touches **physiques** (ZQSD sur AZERTY = WASD).
+- **Effet d'impact discret** : quelques éclats d'écorce, projetés à l'opposé du coup (demandé le 2026-11-07, l'ancien effet était jugé raté).
 - **Après l'explosion, la souche n'a plus de collision** (demandé le 2026-11-07).
 - **Tous les arbres sont coupables** (plus d'arbres de décor), demandé le 2026-11-07.
 - Les arbres sont découpés hors-ligne (Blender) en souche + tronc ; les normales d'origine sont conservées (sinon anneau/traînées visibles à la jonction).
@@ -59,3 +60,4 @@
 | 2026-11-06 | `2a289bf` | Ajout de `PROGRESS.md`, `CLAUDE.md`, `docs/SPECIFICATIONS.md`, tests dans `tests/`, scripts de téléchargement d'assets |
 | 2026-11-07 | `4d82171` | Tous les arbres sont coupables : 2 espèces de plus découpées, 32 arbres de décor remplacés |
 | 2026-11-07 | `5d6faaa` | Souche sans collision après l'explosion en bûches |
+| 2026-11-07 | (ce commit) | Effet d'impact refait : éclats d'écorce discrets, à l'opposé du coup |

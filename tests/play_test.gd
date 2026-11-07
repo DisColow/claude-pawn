@@ -65,7 +65,7 @@ func run() -> void:
 		while player.axe.is_swinging():
 			await physics_frame; t += 1.0 / 60.0
 			if swing == 1:
-				for mark in [0.15, 0.27, 0.35, 0.42, 0.5, 0.7]:
+				for mark in [0.15, 0.27, 0.35, 0.42, 0.47, 0.52, 0.6]:
 					if t >= mark and not taken.has(mark):
 						taken.append(mark); await shot("swing_%03d" % int(mark * 100))
 		print("swing ", swing, " tree health=", tree.health, " state=", tree.state)

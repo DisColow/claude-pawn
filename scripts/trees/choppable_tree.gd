@@ -43,8 +43,10 @@ func _ready() -> void:
 	_setup_collisions()
 
 
-## Point d'entrée des dégâts. `from_position` = position de l'attaquant (oriente l'oscillation et l'explosion).
-func take_hit(damage: float, hit_position: Vector3, hit_normal: Vector3, from_position: Vector3) -> void:
+## Point d'entrée des dégâts. `from_position` = position de l'attaquant (oriente l'oscillation et l'explosion),
+## `swing_direction` = sens du mouvement de la hache (les éclats d'écorce partent à l'opposé).
+func take_hit(damage: float, hit_position: Vector3, hit_normal: Vector3, from_position: Vector3,
+		swing_direction := Vector3.ZERO) -> void:
 	if state != State.STANDING:
 		return
 	hit_count += 1
@@ -53,7 +55,7 @@ func take_hit(damage: float, hit_position: Vector3, hit_normal: Vector3, from_po
 	var push := _horizontal_direction(hit_position - from_position)
 	var sway_axis := Vector3.UP.cross(push).normalized()
 	_sway_velocity += global_basis.inverse() * sway_axis * GameConfig.TREE_SWAY_IMPULSE
-	_spawn_chips(hit_position, hit_normal)
+	_spawn_chips(hit_position, _chip_direction(hit_normal, swing_direction))
 	_play_random(_hit_audio, hit_sounds, 0.9, 1.1)
 	chopped.emit(hit_count, health)
 
@@ -176,13 +178,20 @@ func _radius_between(mesh_instance: MeshInstance3D, min_y: float, max_y: float, 
 
 # --- Utilitaires --------------------------------------------------------------------------
 
-func _spawn_chips(hit_position: Vector3, hit_normal: Vector3) -> void:
+## Les éclats repartent à l'opposé du mouvement de la hache, en s'écartant un peu de l'écorce.
+func _chip_direction(hit_normal: Vector3, swing_direction: Vector3) -> Vector3:
+	var normal := hit_normal if hit_normal.length_squared() > 0.01 else Vector3.BACK
+	if swing_direction.length_squared() < 0.01:
+		return normal
+	return (-swing_direction.normalized() + normal * GameConfig.BARK_CHIPS_SURFACE_BIAS).normalized()
+
+
+func _spawn_chips(at: Vector3, direction: Vector3) -> void:
 	var chips: Node3D = wood_chips_scene.instantiate()
 	get_parent().add_child(chips)
-	var normal := hit_normal if hit_normal.length_squared() > 0.01 else Vector3.BACK
-	chips.global_position = hit_position + normal * 0.05
-	# Le +Z local des particules pointe le long de la normale de l'impact.
-	chips.global_basis = Basis.looking_at(-normal, Vector3.UP if absf(normal.y) < 0.95 else Vector3.RIGHT)
+	chips.global_position = at + direction * 0.04
+	# Le +Z local des particules pointe dans la direction d'éjection.
+	chips.global_basis = Basis.looking_at(-direction, Vector3.UP if absf(direction.y) < 0.95 else Vector3.RIGHT)
 
 
 func _spawn_dust(at: Vector3, direction: Vector3, length: float) -> void:

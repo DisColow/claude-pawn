@@ -109,7 +109,7 @@ func _resolve_hit() -> void:
 	_did_hit = true
 	_impact_angle = STRIKE_ANGLE
 	_hit_stop = HIT_STOP_TIME
-	result.collider.take_hit(GameConfig.AXE_DAMAGE, result.position, result.normal, owner.global_position)
+	result.collider.take_hit(GameConfig.AXE_DAMAGE, result.position, result.normal, owner.global_position, _swing_direction())
 	hit_landed.emit(result.collider, result.position)
 
 
@@ -154,6 +154,13 @@ func _ready_pose() -> Transform3D:
 
 
 ## Pose sur l'arc de frappe : la main tourne autour de l'épaule, le tranchant mène le mouvement.
+## Direction globale du mouvement de la tête de hache au moment de l'impact (le tranchant mène).
+func _swing_direction() -> Vector3:
+	var axis := SWING_AXIS.normalized()
+	var forward := (Vector3.FORWARD - axis * Vector3.FORWARD.dot(axis)).normalized()
+	return (camera.global_basis * axis.cross(forward.rotated(axis, STRIKE_ANGLE))).normalized()
+
+
 func _arc_pose(shoulder: Vector3, angle: float) -> Transform3D:
 	var axis := SWING_AXIS.normalized()
 	var forward := (Vector3.FORWARD - axis * Vector3.FORWARD.dot(axis)).normalized()

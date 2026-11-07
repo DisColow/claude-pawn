@@ -33,6 +33,7 @@ const AXE_HIT_TIME := 0.42              # instant de l'impact dans le coup (s)
 
 # --- Game feel --------------------------------------------------------------
 const SHAKE_AXE_HIT := 0.32             # "trauma" ajouté à chaque coup
+const BARK_CHIPS_SURFACE_BIAS := 0.6   # 0 = éclats exactement à l'opposé du coup, plus = s'écartent de l'écorce
 const TREE_SWAY_IMPULSE := 0.2          # vitesse angulaire (rad/s) ajoutée par coup
 const TREE_SWAY_STIFFNESS := 60.0       # raideur du ressort d'oscillation
 const TREE_SWAY_DAMPING := 4.5          # amortissement de l'oscillation
