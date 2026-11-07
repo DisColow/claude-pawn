@@ -58,4 +58,4 @@
 | 2026-11-06 | `9771656` | Arbres découpés : normales d'origine conservées (anneau / traînées corrigés) |
 | 2026-11-06 | `2a289bf` | Ajout de `PROGRESS.md`, `CLAUDE.md`, `docs/SPECIFICATIONS.md`, tests dans `tests/`, scripts de téléchargement d'assets |
 | 2026-11-07 | `4d82171` | Tous les arbres sont coupables : 2 espèces de plus découpées, 32 arbres de décor remplacés |
-| 2026-11-07 | (ce commit) | Souche sans collision après l'explosion en bûches |
+| 2026-11-07 | `5d6faaa` | Souche sans collision après l'explosion en bûches |
