@@ -9,6 +9,7 @@ Testés avec Blender 5.2 et Python 3 + Pillow/NumPy/soundfile.
 | `make_log.py` | Génère le rondin (`wood_log.glb`) : écorce de l'atlas KayKit + cernes aux extrémités. | `blender -b -P make_log.py -- forest_texture.png wood_rings.png assets/models/props/wood_log.glb` |
 | `orc_recolor.py` | Recolore la texture du personnage de base Quaternius (peau verte orc, short en cuir). | `python3 orc_recolor.py T_Superhero_Male_Dark.png T_Orc_BaseColor.png` |
 | `build_orc.py` | Assemble `orc_worker.glb` : personnage Quaternius + textures orc + animations de la Universal Animation Library (même squelette). | `blender -b -P build_orc.py -- Superhero_Male_FullBody.gltf UAL1_Standard.glb <dossier_textures> assets/models/characters/orc_worker.glb` |
+| `extract_part.py` | Extrait une pièce d'un modèle (îlots d'un objet), la met à l'échelle, place son origine : oreille et défenses de l'orc. | `blender -b -P extract_part.py -- DIENTES_ORC.glb assets/models/characters/orc_tusks.glb colmillos 2 0.075 center` |
 | `fbx2glb.py` | Convertit un FBX Quaternius en GLB (matériaux opaques, mise à l'échelle). | `blender -b -P fbx2glb.py -- Axe.fbx assets/models/props/axe.glb 0.24` |
 
 La texture `assets/textures/wood_rings.png` est générée procéduralement (Pillow).

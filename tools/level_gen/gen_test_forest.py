@@ -22,7 +22,16 @@ SPECIES = [
     ("tree_3_b", 3, 0.9, 1.1),
     ("tree_1_b", 3, 0.9, 1.1),
 ]
-PROPS = ["Rock_1_A", "Rock_2_B", "Rock_3_C", "Bush_1_A", "Bush_2_B", "Grass_1_A", "Grass_2_B"]
+# Rochers solides et buissons qui froissent : scènes du projet ; herbe : modèles bruts (sans collision).
+PROPS = {
+    "Rock_1_A": "res://scenes/props/rock_1_a.tscn",
+    "Rock_2_B": "res://scenes/props/rock_2_b.tscn",
+    "Rock_3_C": "res://scenes/props/rock_3_c.tscn",
+    "Bush_1_A": "res://scenes/props/bush_1_a.tscn",
+    "Bush_2_B": "res://scenes/props/bush_2_b.tscn",
+    "Grass_1_A": "res://assets/models/nature/Grass_1_A_Color1.gltf",
+    "Grass_2_B": "res://assets/models/nature/Grass_2_B_Color1.gltf",
+}
 
 
 def clearing_edge(angle: float) -> float:
@@ -35,7 +44,8 @@ def in_clearing(x: float, z: float, margin: float = 0.0) -> bool:
 
 def tf(x, z, yaw, s=1.0, y=0.0):
     c, sn = math.cos(yaw) * s, math.sin(yaw) * s
-    return "Transform3D(%.4f, 0, %.4f, 0, %.4f, 0, %.4f, 0, %.4f, %.3f, %.3f, %.3f)" % (c, -sn, s, sn, c, x, y, z)
+    # Transform3D s'écrit ligne par ligne dans un .tscn (rotation autour de Y, échelle s).
+    return "Transform3D(%.4f, 0, %.4f, 0, %.4f, 0, %.4f, 0, %.4f, %.3f, %.3f, %.3f)" % (c, sn, s, -sn, c, x, y, z)
 
 
 # --- Arbres sur une grille perturbée ------------------------------------------------------
@@ -58,11 +68,12 @@ ext = [("PackedScene", "res://scenes/player/player.tscn", "player"),
        ("PackedScene", "res://scenes/ui/hud.tscn", "hud"),
        ("Texture2D", "res://assets/textures/dirt_clearing.png", "dirt")]
 ext += [("PackedScene", "res://scenes/trees/%s.tscn" % s[0], s[0]) for s in SPECIES]
-ext += [("PackedScene", "res://assets/models/nature/%s_Color1.gltf" % p, p) for p in PROPS]
+ext += [("PackedScene", path, key) for key, path in PROPS.items()]
 ids = {key: "%d_%s" % (k + 1, key) for k, (_, _, key) in enumerate(ext)}
 
 out = ["[gd_scene load_steps=%d format=3]\n" % (len(ext) + 10)]
 out += ['[ext_resource type="%s" path="%s" id="%s"]' % (t, p, ids[key]) for t, p, key in ext]
+# Soleil haut (70°) dans le dos du point d'apparition : clairière ensoleillée, ombre du joueur devant lui.
 out.append('''
 [sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
 sky_top_color = Color(0.36, 0.55, 0.82, 1)
@@ -121,7 +132,7 @@ size = Vector3(200, 2, 200)
 environment = SubResource("Env")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.766, -0.413, 0.492, 0, 0.766, 0.643, -0.643, -0.492, 0.587, 0, 20, 0)
+transform = Transform3D(0.940, -0.321, 0.117, 0.000, 0.342, 0.940, -0.342, -0.883, 0.321, 0, 20, 0)
 light_color = Color(1, 0.95, 0.86, 1)
 light_energy = 1.25
 shadow_enabled = true
@@ -155,7 +166,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 for k, (name, x, z, yaw, s) in enumerate(trees):
     out.append('[node name="Tree%03d" parent="Trees" instance=ExtResource("%s")]\ntransform = %s\n' % (k + 1, ids[name], tf(x, z, yaw, s)))
 
-# --- Rochers, buissons et herbe (décor, sans collision) -----------------------------------
+# --- Rochers (solides), buissons (froissent) et herbe -----------------------------------
 out.append('[node name="Scenery" type="Node3D" parent="."]\n')
 count = 0
 

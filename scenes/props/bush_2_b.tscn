@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://bpsbox6txxdol"]
+
+[ext_resource type="Script" uid="uid://bwiy37rd7i3m6" path="res://scripts/props/rustling_bush.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://ddwd0lytb5wgq" path="res://assets/models/nature/Bush_2_B_Color1.gltf" id="2_model"]
+[ext_resource type="AudioStream" uid="uid://bgy07ul0v3ei6" path="res://assets/sounds/foliage/bush_rustle_0.ogg" id="3_r0"]
+[ext_resource type="AudioStream" uid="uid://c2jprfeale2tq" path="res://assets/sounds/foliage/bush_rustle_1.ogg" id="4_r1"]
+[ext_resource type="AudioStream" uid="uid://dvbgiucc1brw4" path="res://assets/sounds/foliage/bush_rustle_2.ogg" id="5_r2"]
+[ext_resource type="AudioStream" uid="uid://dqnx6fsj6ii0h" path="res://assets/sounds/foliage/bush_rustle_3.ogg" id="6_r3"]
+[ext_resource type="AudioStream" uid="uid://cl4v0urltgoym" path="res://assets/sounds/foliage/bush_rustle_4.ogg" id="7_r4"]
+[ext_resource type="AudioStream" uid="uid://b6868kks65bc4" path="res://assets/sounds/foliage/bush_rustle_5.ogg" id="8_r5"]
+
+[node name="Bush2B" type="Area3D" unique_id=49299191]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+script = ExtResource("1_script")
+rustle_sounds = Array[AudioStream]([ExtResource("3_r0"), ExtResource("4_r1"), ExtResource("5_r2"), ExtResource("6_r3"), ExtResource("7_r4"), ExtResource("8_r5")])
+
+[node name="Model" parent="." unique_id=340055164 instance=ExtResource("2_model")]
+
+[node name="RustleAudio" type="AudioStreamPlayer3D" parent="." unique_id=720931507]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+volume_db = -2.0
+max_distance = 25.0

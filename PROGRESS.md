@@ -17,9 +17,10 @@
 | Arbre | 100 PV, 4 coups (25 dmg), petits éclats d'écorce éjectés à l'opposé du mouvement de la hache (direction transmise par `AxeController`), oscillation élastique (ressort amorti), son d'impact aléatoire, hit-stop. À 0 PV : **le tronc explose en 4 rondins** projetés à l'opposé du joueur + poussière/feuilles + fracas + secousse. La souche reste, **sans collision** (traversable). Charnière et collisions déduites des meshes. | `scripts/trees/choppable_tree.gd`, `scenes/trees/*.tscn` |
 | Rondins | `WoodLog` (RigidBody3D, couche 4 « logs »), son au choc, groupe `wood_logs`. Pas encore ramassables. | `scripts/props/wood_log.gd`, `scenes/props/wood_log.tscn` |
 | VFX | `WoodChipsVFX` (7 éclats d'écorce discrets), `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`) | `scripts/vfx/`, `scenes/vfx/` |
-| Joueur | CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
+| Joueur | Orc avec **oreilles pointues et défenses** (`OrcHeadParts`, modèles CC-BY greffés sur l'os Head ; visibles dans l'ombre, la tête étant masquée en vue subjective). CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
 | HUD | Réticule + jauge d'endurance | `scenes/ui/hud.tscn` |
-| Monde | Forêt de test **façon Warcraft 3** générée par `tools/level_gen/gen_test_forest.py` : clairière de terre battue (décalque) au centre, **504 arbres coupables** serrés (grille perturbée, pas 2,6 m ; 85 % de sapins `tree_4_c`), rochers/buissons/herbe en décor sans collision. Rayons de tronc mis en cache par modèle, oscillation calculée seulement quand un arbre bouge. | `scenes/world/test_forest.tscn`, `tools/level_gen/` |
+| Décor | **Rochers solides** (`SolidProp` : collision convexe calculée depuis le mesh, en cache) ; **buissons traversables qui froissent** (`RustlingBush` : son de feuilles + frémissement, répété tant qu'on s'y déplace). | `scripts/props/`, `scenes/props/` |
+| Monde | Forêt de test **façon Warcraft 3** générée par `tools/level_gen/gen_test_forest.py` : clairière de terre battue (décalque) au centre, **504 arbres coupables** serrés (grille perturbée, pas 2,6 m ; 85 % de sapins `tree_4_c`), rochers solides, buissons qui froissent, herbe ; soleil haut (70°) dans le dos du joueur, clairière ensoleillée. Rayons de tronc mis en cache par modèle, oscillation calculée seulement quand un arbre bouge. | `scenes/world/test_forest.tscn`, `tools/level_gen/` |
 | Assets | KayKit, Quaternius, Kenney, OpenGameArt (CC0 sauf `tree_crash.ogg` CC-BY 3.0) | `CREDITS.md`, `tools/asset_pipeline/` |
 
 ## Décisions prises (ne pas re-discuter sans l'utilisateur)
@@ -31,6 +32,7 @@
 - Touches **physiques** (ZQSD sur AZERTY = WASD).
 - **Effet d'impact discret** : quelques éclats d'écorce, projetés à l'opposé du coup (demandé le 2026-11-07, l'ancien effet était jugé raté).
 - **Le dépôt est toujours dans l'état où l'éditeur Godot le laisse** : `tools/resave_with_editor.sh` avant chaque commit (sinon conflits au `git pull` chez l'utilisateur).
+- Rochers solides, buissons traversables avec bruit ; **arbres (sapins KayKit) gardés tels quels** ; ramassage des bûches **avec E** et animation en body awareness ; orc avec crocs et oreilles pointues (2026-11-07).
 - **Forêt dense façon Warcraft 3** (référence : captures de WC3 Reforged fournies le 2026-11-07) : la scène de test se régénère avec le script, ne pas l'éditer à la main.
 - **Après l'explosion, la souche n'a plus de collision** (demandé le 2026-11-07).
 - **Tous les arbres sont coupables** (plus d'arbres de décor), demandé le 2026-11-07.
@@ -39,10 +41,6 @@
 ## Questions ouvertes (à poser à l'utilisateur)
 
 1. Créer `main` à partir de la branche actuelle et travailler ensuite par branches de fonctionnalité + PR ?
-2. Rochers et buissons : **sans collision** aujourd'hui (on les traverse). Les rendre solides ?
-5. Les sapins KayKit (`tree_4_c`) ont des étages fins et un long tronc nu : les sapins de WC3 sont plus touffus jusqu'au sol. Chercher un modèle de sapin plus fourni ?
-3. Ramassage des rondins : automatique en marchant dessus, ou touche `E` ?
-4. Style de l'orc (base humaine recolorée, sans crocs/oreilles) : OK ?
 
 ## Problèmes connus / dette
 
@@ -66,3 +64,4 @@
 | 2026-11-07 | `5f4d16a` | Effet d'impact refait : éclats d'écorce discrets, à l'opposé du coup |
 | 2026-11-07 | `29cf561` | Forêt dense façon Warcraft 3 (504 arbres, clairière de terre battue), générateur de niveau |
 | 2026-11-07 | `9ac9724` | `git pull` réparé : scènes, imports et `project.godot` au format de l'éditeur, `.gitattributes`, outil `tools/resave_with_editor.sh` |
+| 2026-11-07 | (ce commit) | Rochers solides, buissons qui froissent, orc avec oreilles pointues et défenses, soleil corrigé |

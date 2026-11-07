@@ -69,6 +69,11 @@ func _ready() -> void:
 
 	_attach_axe(skeleton, false)
 	_attach_axe(shadow_skeleton, true)
+	# Oreilles pointues et défenses : invisibles à la caméra (tête masquée), présentes dans l'ombre.
+	for part in OrcHeadParts.attach(skeleton):
+		_set_shadow_mode(part, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	for part in OrcHeadParts.attach(shadow_skeleton):
+		_set_shadow_mode(part, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY)
 
 	_hand_target = Node3D.new()
 	_hand_target.name = "HandTarget"

@@ -17,6 +17,11 @@ const STAMINA_REGEN := 16.0             # points / seconde
 const STAMINA_REGEN_DELAY := 0.8        # secondes avant régénération
 const STAMINA_SPRINT_MIN := 15.0        # endurance minimale pour relancer un sprint
 
+# --- Décor ------------------------------------------------------------------
+const BUSH_RUSTLE_INTERVAL := 0.45      # délai minimal entre deux froissements d'un buisson (s)
+const BUSH_RUSTLE_MIN_SPEED := 1.0      # vitesse à partir de laquelle on froisse en continu (m/s)
+const BUSH_SHAKE_ANGLE := 0.09          # inclinaison du frémissement (rad)
+
 # --- Transport de bois ------------------------------------------------------
 const BASE_WOOD_CAPACITY := 10
 const MAX_CARRY_SPEED_PENALTY := 0.35

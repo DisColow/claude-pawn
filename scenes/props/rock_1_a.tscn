@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://d0jav34f3pcjw"]
+
+[ext_resource type="Script" uid="uid://cf7w7jpa074iq" path="res://scripts/props/solid_prop.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://7600wq82h51e" path="res://assets/models/nature/Rock_1_A_Color1.gltf" id="2_model"]
+
+[node name="Rock1A" type="StaticBody3D" unique_id=449451181]
+collision_mask = 0
+script = ExtResource("1_script")
+
+[node name="Model" parent="." unique_id=1410357044 instance=ExtResource("2_model")]

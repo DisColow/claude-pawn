@@ -1,6 +1,6 @@
 extends SceneTree
 # Scénarios dans la clairière de test, captures en vue joueur.
-# Modes : chop (4 coups sur Tree001, l'arbre de lisière face au joueur ; ou TREE=TreeNNN), look (regard 0/-35/-70/+30°, OPEN=1 en terrain dégagé), tp (vues 3e personne).
+# Modes : chop (4 coups sur Tree001, l'arbre de lisière face au joueur ; ou TREE=TreeNNN), look (regard 0/-35/-70/+30°, OPEN=1 au centre de la clairière), tp (vues 3e personne).
 # usage : xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --resolution 960x540 -s res://tests/play_test.gd -- prefixe chop
 
 var out := ""
@@ -22,7 +22,7 @@ func run() -> void:
 	var tree: ChoppableTree = world.get_node("Trees/" + (OS.get_environment("TREE") if OS.get_environment("TREE") != "" else "Tree001"))
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var tp := tree.global_position
-	player.global_position = tp + Vector3(0, 0, 1.25) if OS.get_environment("OPEN") == "" else Vector3(14, 0, 16)
+	player.global_position = tp + Vector3(0, 0, 1.25) if OS.get_environment("OPEN") == "" else Vector3(1.5, 0, 4)
 	player.rotation.y = 0.0
 	await frames(30)
 	if mode == "tp":
