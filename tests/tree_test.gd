@@ -46,5 +46,8 @@ func run() -> void:
 	await shot(out + "_landed.png")
 	for f in 120: await physics_frame
 	await shot(out + "_after.png")
+	print("collisions après explosion : tronc désactivé=", tree.get_node("TrunkCollision").disabled, " souche désactivée=", tree.get_node("StumpCollision").disabled)
+	var probe := PhysicsRayQueryParameters3D.create(tree.global_position + Vector3(0, 0.25, 2.0), tree.global_position + Vector3(0, 0.25, -2.0), 4)
+	print("rayon à travers la souche (couche arbres) touche quelque chose : ", not tree.get_world_3d().direct_space_state.intersect_ray(probe).is_empty())
 	print("logs: ", get_nodes_in_group("wood_logs").map(func(l): return l.global_position))
 	quit()

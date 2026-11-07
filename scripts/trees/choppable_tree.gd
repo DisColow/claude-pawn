@@ -2,7 +2,7 @@ class_name ChoppableTree
 extends StaticBody3D
 ## Arbre abattable : encaisse les coups de hache et oscille. Quand sa vie tombe à zéro, le tronc
 ## explose sur place en rondins physiques, projetés surtout dans la direction du dernier coup.
-## La souche reste en place.
+## La souche reste en place, sans collision : on la traverse.
 ##
 ## Le modèle est découpé en deux GLB (souche + tronc). L'origine du nœud du tronc dans le GLB
 ## est le sommet de la souche : le script la récupère automatiquement, aucun réglage par variante.
@@ -82,7 +82,9 @@ func _burst(push: Vector3) -> void:
 	var base := _trunk_pivot.global_position
 	var canopy := base + Vector3.UP * _trunk_length * 0.7
 
+	# Une fois l'arbre réduit en bûches, plus rien ne bloque : ni le tronc, ni la souche.
 	_trunk_collision.set_deferred("disabled", true)
+	_stump_collision.set_deferred("disabled", true)
 	_trunk_pivot.hide()
 	_play_random(_burst_audio, burst_sounds, 0.95, 1.05)
 	_spawn_dust(base - Vector3.UP * (base.y - global_position.y - 0.1), push, 2.0)

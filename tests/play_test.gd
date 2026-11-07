@@ -72,4 +72,8 @@ func run() -> void:
 	await frames(30); await shot("falling")
 	await frames(60); await shot("landed")
 	await frames(90); await shot("after")
+	# La souche ne doit plus bloquer : on marche droit dessus.
+	var z0 := player.global_position.z
+	Input.action_press("move_forward"); await frames(45); Input.action_release("move_forward")
+	print("traversée de la souche : z %.2f -> %.2f (souche à z=%.2f)" % [z0, player.global_position.z, tree.global_position.z])
 	quit()
