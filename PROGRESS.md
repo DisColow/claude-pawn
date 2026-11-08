@@ -1,7 +1,7 @@
 # PAWN — Suivi de progression
 
 > Fichier de reprise : l'état du projet, les décisions prises et la suite. Cahier des charges : `docs/SPECIFICATIONS.md`.
-> **À tenir à jour à chaque étape terminée** (voir `CLAUDE.md`). Dernière mise à jour : 2026-11-07.
+> **À tenir à jour à chaque étape terminée** (voir `CLAUDE.md`). Dernière mise à jour : 2026-11-08.
 
 ## Où on en est
 
@@ -18,7 +18,7 @@
 | Rondins | `WoodLog` (RigidBody3D, couche 4 « logs »), son au choc, groupe `wood_logs`. | `scripts/props/wood_log.gd`, `scenes/props/wood_log.tscn` |
 | VFX | `WoodChipsVFX` (7 éclats d'écorce discrets), `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`) | `scripts/vfx/`, `scenes/vfx/` |
 | Joueur | Orc avec **oreilles pointues et défenses** (`OrcHeadParts`, modèles CC-BY greffés sur l'os Head ; visibles dans l'ombre, la tête étant masquée en vue subjective). CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
-| Ramassage / portage | `LogCarrier` (enfant du joueur) : viser une bûche (rayon caméra, 2,3 m) → « [E] Ramasser ». Séquence de 1,1 s : pas vers la bûche, accroupissement (`Crouch_Idle`), regard attiré vers elle, **bras gauche en IK** (2e `TwoBoneIK3D`) qui saisit l'extrémité la plus proche, bûche hissée en arc par la gauche jusqu'à la pile. Pile sur l'épaule gauche (4+4+2, bûches à 50 %), z-clip + copie d'ombre, main gauche qui la tient. Immobile et sans coup de hache pendant le ramassage ; hache utilisable ensuite. Capacité 10, « Charge pleine », pénalité -35 %. | `scripts/player/log_carrier.gd`, `first_person_body.gd` |
+| Ramassage / portage | `LogCarrier` (enfant du joueur) : viser une bûche (rayon caméra, 2,3 m) → « [E] Ramasser ». Séquence de 2 s : la main droite **range la hache à la ceinture** (hanche droite, attache sur l'os pelvis), pas vers la bûche, accroupissement (`Crouch_Idle`), regard attiré vers elle, **la main droite empoigne la bûche** et la hisse en travers du corps jusqu'à l'épaule gauche (elle rapetisse jusqu'à sa taille « portée »), puis **reprend la hache** et revient en garde. **La main gauche (2e `TwoBoneIK3D`) tient la pile pendant toute la séquence** ; pour la 1re bûche, elle monte l'accueillir. Pile sur l'épaule gauche (4+4+2, bûches à 50 %), z-clip + copie d'ombre, main gauche qui la tient. Immobile et sans coup de hache pendant le ramassage ; hache utilisable ensuite. Capacité 10, « Charge pleine », pénalité -35 %. | `scripts/player/log_carrier.gd`, `first_person_body.gd` |
 | HUD | Réticule, jauge d'endurance, invite de ramassage, compteur « Bois : n / 10 » | `scenes/ui/hud.tscn` |
 | Décor | **Rochers solides** (`SolidProp` : collision convexe calculée depuis le mesh, en cache) ; **buissons traversables qui froissent** (`RustlingBush` : son de feuilles + frémissement, répété tant qu'on s'y déplace). | `scripts/props/`, `scenes/props/` |
 | Monde | Forêt de test **façon Warcraft 3** générée par `tools/level_gen/gen_test_forest.py` : clairière de terre battue (décalque) au centre, **504 arbres coupables** serrés (grille perturbée, pas 2,6 m ; 85 % de sapins `tree_4_c`), rochers solides, buissons qui froissent, herbe ; soleil haut (70°) dans le dos du joueur, clairière ensoleillée. Rayons de tronc mis en cache par modèle, oscillation calculée seulement quand un arbre bouge. | `scenes/world/test_forest.tscn`, `tools/level_gen/` |
@@ -35,6 +35,7 @@
 - **Le dépôt est toujours dans l'état où l'éditeur Godot le laisse** : `tools/resave_with_editor.sh` avant chaque commit (sinon conflits au `git pull` chez l'utilisateur).
 - Rochers solides, buissons traversables avec bruit ; **arbres (sapins KayKit) gardés tels quels** ; ramassage des bûches **avec E** et animation en body awareness ; orc avec crocs et oreilles pointues (2026-11-07).
 - **Forêt dense façon Warcraft 3** (référence : captures de WC3 Reforged fournies le 2026-11-07) : la scène de test se régénère avec le script, ne pas l'éditer à la main.
+- **Ramassage de la main droite** (2026-11-08) : la main gauche, qui tient la pile sur l'épaule, ne doit jamais la lâcher (sinon les bûches tomberaient) ; l'orc range donc sa hache à la ceinture pour ramasser.
 - **Après l'explosion, la souche n'a plus de collision** (demandé le 2026-11-07).
 - **Tous les arbres sont coupables** (plus d'arbres de décor), demandé le 2026-11-07.
 - Les arbres sont découpés hors-ligne (Blender) en souche + tronc ; les normales d'origine sont conservées (sinon anneau/traînées visibles à la jonction).
@@ -67,3 +68,4 @@
 | 2026-11-07 | `9ac9724` | `git pull` réparé : scènes, imports et `project.godot` au format de l'éditeur, `.gitattributes`, outil `tools/resave_with_editor.sh` |
 | 2026-11-07 | `c7de86d` | Rochers solides, buissons qui froissent, orc avec oreilles pointues et défenses, soleil corrigé |
 | 2026-11-07 | `0f0b5da` | Ramassage des bûches (E) avec animation en body awareness, pile sur l'épaule gauche (§3.2) |
+| 2026-11-08 | (ce commit) | Ramassage de la main droite : hache rangée à la ceinture, main gauche qui ne lâche jamais la pile |

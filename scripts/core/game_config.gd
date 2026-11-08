@@ -26,8 +26,12 @@ const BUSH_SHAKE_ANGLE := 0.09          # inclinaison du frémissement (rad)
 const BASE_WOOD_CAPACITY := 10
 const MAX_CARRY_SPEED_PENALTY := 0.35
 const PICKUP_RANGE := 2.3               # distance max (depuis la caméra) pour ramasser une bûche (m)
-const PICKUP_DURATION := 1.1            # durée totale du ramassage (s)
-const PICKUP_GRAB_TIME := 0.5           # instant où la main saisit la bûche (s)
+# Ramassage : hache rangée à la ceinture, bûche saisie de la main droite et posée sur l'épaule gauche.
+const PICKUP_STOW_TIME := 0.35          # la hache est rangée à la ceinture (s)
+const PICKUP_GRAB_TIME := 0.95          # la main droite saisit la bûche (s)
+const PICKUP_PLACE_TIME := 1.5          # la bûche est posée sur la pile (s)
+const PICKUP_DRAW_TIME := 1.75          # la main droite reprend la hache (s)
+const PICKUP_DURATION := 2.05           # retour en garde, fin du ramassage (s)
 const PICKUP_CROUCH_DROP := 0.62        # descente de la caméra accroupi (m)
 const PICKUP_LOOK_BLEND := 0.65         # part du regard attirée vers la bûche pendant le ramassage
 const CARRIED_LOG_SCALE := 0.5          # taille des bûches portées sur l'épaule (lisibilité de la vue)

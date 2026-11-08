@@ -4,7 +4,8 @@ extends Node3D
 ## - corps complet animé (idle / marche / course / sprint / saut), visible en regardant vers le bas ;
 ## - tête masquée côté caméra, mais présente dans l'ombre portée (squelette d'ombre dédié) ;
 ## - bras droit piloté par IK pour tenir la hache animée en espace caméra ;
-## - bras gauche piloté par IK (dosable) pour ramasser les bûches et tenir la pile sur l'épaule ;
+## - bras gauche piloté par IK (dosable) pour tenir la pile de bûches sur l'épaule ;
+## - hache rangeable à la ceinture (hanche droite) pour libérer la main droite ;
 ## - accroupissement dosable (animation Crouch_Idle) pour le ramassage ;
 ## - tous les éléments de la vue subjective utilisent le Z-Clip Depth Scaling.
 
@@ -26,6 +27,9 @@ const MODEL_SCALE := 1.05
 const LOOK_DOWN_BODY_SHIFT := 0.24
 ## Recul supplémentaire à pleine vitesse (les animations de course penchent le buste en avant).
 const SPEED_BODY_SHIFT := 0.2
+## Hache rangée à la ceinture, dans le repère du squelette (modèle tourné vers +Z, droite = -X) :
+## tête en haut contre la hanche droite, manche le long de la cuisse, tranchant vers l'arrière.
+const AXE_ON_HIP := Transform3D(Vector3(0.0, -0.12, 0.99), Vector3(0.06, 0.99, 0.12), Vector3(-1.0, 0.06, 0.0), Vector3(-0.21, 0.5, 0.06))
 const AXE_IN_HAND := Transform3D(Vector3(0, -1, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0), Vector3(-0.035, 0.095, 0.08))
 
 @export var model_scene: PackedScene = preload("res://assets/models/characters/orc_worker.glb")
@@ -50,6 +54,10 @@ var _left_hand_target: Node3D
 var _left_elbow_pole: Node3D
 var _shoulder_bone := -1
 var _left_shoulder_bone := -1
+## Hache (visible, ombre) et ses deux points d'attache par squelette : [main, hanche].
+var _axes: Array[Node3D] = []
+var _axe_mounts: Array[Array] = []
+var _hip_mount: Node3D
 var _air_blend := 0.0
 var _base_position := Vector3.ZERO
 
@@ -77,6 +85,7 @@ func _ready() -> void:
 
 	_attach_axe(skeleton, false)
 	_attach_axe(shadow_skeleton, true)
+	_hip_mount = _axe_mounts[0][1]
 	# Oreilles pointues et défenses : invisibles à la caméra (tête masquée), présentes dans l'ombre.
 	for part in OrcHeadParts.attach(skeleton):
 		_set_shadow_mode(part, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
@@ -109,8 +118,35 @@ func _ready() -> void:
 
 ## Place la main droite pour que la hache soit tenue à `axe_global`. `pole_global` oriente le coude.
 func hold_axe_at(axe_global: Transform3D, pole_global: Vector3) -> void:
-	_hand_target.global_transform = axe_global * AXE_IN_HAND.affine_inverse()
+	hold_right_hand_at(hand_for_axe(axe_global), pole_global)
+
+
+## Main droite (position et orientation de l'os hand_r) et coude.
+func hold_right_hand_at(hand_global: Transform3D, pole_global: Vector3) -> void:
+	_hand_target.global_transform = hand_global
 	_elbow_pole.global_position = pole_global
+
+
+## Transform de la main droite qui tiendrait la hache à `axe_global`.
+func hand_for_axe(axe_global: Transform3D) -> Transform3D:
+	return axe_global * AXE_IN_HAND.affine_inverse()
+
+
+## Position globale de la hache rangée à la ceinture (suit la hanche animée).
+func axe_stow_global() -> Transform3D:
+	return _hip_mount.global_transform * _hip_axe_local()
+
+
+## Range la hache à la ceinture (true) ou la remet dans la main droite (false).
+func set_axe_stowed(stowed: bool) -> void:
+	for i in _axes.size():
+		var mount: Node3D = _axe_mounts[i][1 if stowed else 0]
+		_axes[i].reparent(mount, false)
+		_axes[i].transform = _hip_axe_local() if stowed else AXE_IN_HAND
+
+
+func get_right_shoulder_local() -> Vector3:
+	return to_local(get_shoulder_position())
 
 
 func get_shoulder_position() -> Vector3:
@@ -260,7 +296,13 @@ func _attach_axe(target_skeleton: Skeleton3D, shadow_only: bool) -> void:
 	attachment.name = "AxeAttachment"
 	target_skeleton.add_child(attachment)
 	attachment.bone_name = "hand_r"
+	var hip := BoneAttachment3D.new()
+	hip.name = "AxeHipMount"
+	target_skeleton.add_child(hip)
+	hip.bone_name = "pelvis"
+	_axe_mounts.append([attachment, hip])
 	var axe: Node3D = axe_scene.instantiate()
+	_axes.append(axe)
 	axe.name = "Axe"
 	axe.transform = AXE_IN_HAND
 	attachment.add_child(axe)
@@ -269,6 +311,12 @@ func _attach_axe(target_skeleton: Skeleton3D, shadow_only: bool) -> void:
 	else:
 		_set_shadow_mode(axe, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 		ZClip.apply(axe)
+
+
+## Hache rangée exprimée dans le repère de l'os pelvis (au repos).
+func _hip_axe_local() -> Transform3D:
+	var pelvis := skeleton.get_bone_global_rest(skeleton.find_bone("pelvis"))
+	return pelvis.affine_inverse() * AXE_ON_HIP
 
 
 func _set_shadow_mode(root: Node, mode: GeometryInstance3D.ShadowCastingSetting) -> void:

@@ -43,7 +43,7 @@ func run() -> void:
 	await shot("aim")
 	print("invite : '", player.carrier._prompt, "'")
 	await press_interact()
-	var marks := [0.15, 0.35, 0.5, 0.7, 0.9]
+	var marks := [0.2, 0.4, 0.7, 0.95, 1.2, 1.45, 1.7, 1.95]
 	var t := 0.0; var k := 0
 	while player.carrier.is_busy():
 		await physics_frame; t += 1.0 / 60.0
@@ -52,6 +52,19 @@ func run() -> void:
 	await frames(10)
 	player._pitch = 0.0; await frames(5); await shot("carry1")
 	print("après 1 ramassage : bûches=", player.carrier.count, " bûches physiques restantes=", world.get_tree().get_nodes_in_group("wood_logs").size())
+	# 2e ramassage filmé de l'extérieur : la main gauche doit tenir la pile pendant toute la séquence.
+	player.global_position = logs[0].global_position + Vector3(0.3, 0, 1.3); player.global_position.y = 0
+	await frames(3); aim(player, logs[0].global_position); await frames(3)
+	var tp_cam := Camera3D.new(); world.add_child(tp_cam); tp_cam.fov = 55
+	tp_cam.global_position = player.global_position + player.global_basis * Vector3(1.9, 1.5, -1.2)
+	tp_cam.look_at(player.global_position + Vector3(0, 0.9, 0) - player.global_basis.z * 0.4); tp_cam.current = true
+	await press_interact()
+	t = 0.0; k = 0
+	while player.carrier.is_busy():
+		await physics_frame; t += 1.0 / 60.0
+		if k < marks.size() and t >= marks[k]:
+			await shot("tp_%02d" % int(marks[k] * 100)); k += 1
+	player.camera.current = true
 	for i in [0, 2, 3, 4, 5, 6, 7, 8, 9]:
 		if not is_instance_valid(logs[i]): continue
 		player.global_position = logs[i].global_position + Vector3(0, 0, 1.3); player.global_position.y = 0
