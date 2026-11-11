@@ -4,7 +4,9 @@ extends StaticBody3D
 ## détruit (par les ennemis). Trois états, chacun avec son modèle : chantier (étapes successives
 ## sous échafaudage), bâtiment debout, ruines. Comme dans Warcraft 3, les points de vie montent
 ## pendant la construction et un chantier peut être détruit avant d'être fini.
-## Les classes filles règlent `max_health` et `build_time` (depuis `GameConfig`) avant `super._ready()`.
+## Nom, points de vie, durée du chantier et taille viennent de `GameConfig.BUILDINGS[kind]`.
+## Le chantier n'avance que si un péon y travaille (`work()`), sauf `auto_build`.
+## Un enfant `Yard` (`WoodStockpile`) éventuel n'accepte les dépôts que si le bâtiment est debout.
 
 signal state_changed(state: State)
 signal health_changed(health: float, max_health: float)
@@ -14,10 +16,12 @@ enum State { UNDER_CONSTRUCTION, BUILT, DESTROYED }
 const DUST_SCENE := preload("res://scenes/vfx/dust_impact_vfx.tscn")
 const BAR_SIZE := Vector2(3.6, 0.3)
 
-## Nom affiché au-dessus du bâtiment.
-@export var building_name := "Bâtiment"
+## Clé du bâtiment dans `GameConfig.BUILDINGS`.
+@export var kind := "lumber_mill"
 ## false = le bâtiment apparaît en chantier et se construit tout seul.
 @export var starts_built := true
+## true = le chantier avance tout seul (tests) ; false = il faut qu'un péon y travaille.
+@export var auto_build := false
 @export var built_model: PackedScene
 ## Modèles du chantier, du début à la fin de la construction.
 @export var stage_models: Array[PackedScene] = []
@@ -26,6 +30,7 @@ const BAR_SIZE := Vector2(3.6, 0.3)
 @export var hit_sounds: Array[AudioStream] = []
 @export var collapse_sound: AudioStream
 
+var building_name := "Bâtiment"
 var max_health := 1000.0
 var build_time := 20.0
 var health := 0.0
@@ -38,6 +43,9 @@ var _stage := -1
 var _label: Label3D
 var _bar: Node3D
 var _bar_fill: MeshInstance3D
+var _yard: WoodStockpile
+## Demi-largeur de la boîte de collision (pour la portée d'attaque et de construction).
+var _radius := 1.0
 
 @onready var _collision: CollisionShape3D = $Collision
 @onready var _audio: AudioStreamPlayer3D = $Audio
@@ -45,9 +53,14 @@ var _bar_fill: MeshInstance3D
 
 func _ready() -> void:
 	add_to_group("camp_buildings")
+	var config: Dictionary = GameConfig.BUILDINGS[kind]
+	building_name = config["name"]
+	max_health = config["health"]
+	build_time = config["build_time"]
+	_yard = get_node_or_null("Yard") as WoodStockpile
 	_visual = Node3D.new()
 	_visual.name = "Visual"
-	_visual.scale = Vector3.ONE * GameConfig.BUILDING_MODEL_SCALE
+	_visual.scale = Vector3.ONE * float(config["scale"])
 	add_child(_visual)
 	_collision.shape = BoxShape3D.new()
 	_build_overlay()
@@ -67,6 +80,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if auto_build:
+		work(delta)
+
+
+## Fait avancer le chantier de `delta` secondes de travail (appelé tant qu'un péon construit).
+func work(delta: float) -> void:
 	if state != State.UNDER_CONSTRUCTION:
 		return
 	build_progress = minf(build_progress + delta / build_time, 1.0)
@@ -81,13 +100,19 @@ func _process(delta: float) -> void:
 
 ## Ordre de construction (ou de reconstruction après destruction) : le chantier démarre.
 func begin_construction() -> void:
-	state = State.UNDER_CONSTRUCTION
+	_set_state(State.UNDER_CONSTRUCTION)
 	build_progress = 0.0
 	_stage = -1
 	_set_health(max_health * GameConfig.BUILDING_START_HEALTH_RATIO)
 	_show_stage()
 	_update_overlay()
 	state_changed.emit(state)
+
+
+func _set_state(new_state: State) -> void:
+	state = new_state
+	if _yard:
+		_yard.enabled = state == State.BUILT
 
 
 ## Dégâts infligés par un ennemi. À zéro point de vie, le bâtiment (ou son chantier) s'effondre.
@@ -116,13 +141,23 @@ func is_built() -> bool:
 	return state == State.BUILT
 
 
+## Cible valable pour les ennemis : tout bâtiment qui n'est pas en ruines.
+func is_targetable() -> bool:
+	return state != State.DESTROYED
+
+
+## Distance du centre au bord (les unités s'arrêtent au bord, pas au centre).
+func get_target_radius() -> float:
+	return _radius
+
+
 func _set_health(value: float) -> void:
 	health = clampf(value, 0.0, max_health)
 	health_changed.emit(health, max_health)
 
 
 func _complete_construction() -> void:
-	state = State.BUILT
+	_set_state(State.BUILT)
 	build_progress = 1.0
 	if starts_built and health <= 0.0:
 		_set_health(max_health)
@@ -132,7 +167,7 @@ func _complete_construction() -> void:
 
 
 func _collapse() -> void:
-	state = State.DESTROYED
+	_set_state(State.DESTROYED)
 	_show_model([ruins_model])
 	_update_overlay()
 	var dust: DustImpactVFX = DUST_SCENE.instantiate()
@@ -175,6 +210,7 @@ func _show_model(models: Array[PackedScene]) -> void:
 	var box := _collision.shape as BoxShape3D
 	box.size = Vector3(bounds.size.x * 0.8, bounds.size.y, bounds.size.z * 0.8)
 	_collision.position = bounds.get_center()
+	_radius = maxf(box.size.x, box.size.z) * 0.5
 	_on_model_changed()
 
 

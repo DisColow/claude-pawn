@@ -4,6 +4,11 @@ extends CharacterBody3D
 ## ramassage des bûches (E, via LogCarrier).
 
 signal stamina_changed(value: float, max_value: float)
+signal health_changed(value: float, max_value: float)
+## Le joueur vient d'être touché.
+signal hurt
+signal died
+signal respawned
 
 const PITCH_LIMIT := deg_to_rad(85.0)
 const FOOTSTEP_DISTANCE := 1.6
@@ -11,6 +16,13 @@ const FOOTSTEP_DISTANCE := 1.6
 ## Rondins portés sur l'épaule (tenu à jour par LogCarrier) : ralentit le joueur.
 var carried_logs := 0
 var stamina := GameConfig.MAX_STAMINA
+var health := GameConfig.PLAYER_MAX_HEALTH
+
+var _dead := false
+var _respawn_timer := 0.0
+var _regen_delay := 0.0
+## Point de réapparition (position de départ).
+var _spawn_transform := Transform3D.IDENTITY
 
 var _pitch := 0.0
 var _sprinting := false
@@ -34,6 +46,7 @@ func _ready() -> void:
 	add_to_group("player")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	axe.hit_landed.connect(_on_axe_hit)
+	_spawn_transform = global_transform
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -48,10 +61,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if Input.is_action_pressed("attack") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	_update_health(delta)
+	if Input.is_action_pressed("attack") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not _dead:
 		axe.request_swing()
 
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if _dead:
+		input = Vector2.ZERO
 	carried_logs = carrier.count
 	head.rotation.x = _pitch
 	var wish := (global_basis * Vector3(input.x, 0.0, input.y))
@@ -63,7 +79,7 @@ func _physics_process(delta: float) -> void:
 
 	if not is_on_floor():
 		velocity += get_gravity() * delta
-	elif Input.is_action_just_pressed("jump"):
+	elif Input.is_action_just_pressed("jump") and not _dead:
 		velocity.y = GameConfig.JUMP_VELOCITY
 
 	var acceleration := GameConfig.GROUND_ACCELERATION if is_on_floor() else GameConfig.AIR_ACCELERATION
@@ -74,6 +90,67 @@ func _physics_process(delta: float) -> void:
 
 	_update_body(delta)
 	_update_footsteps(delta)
+
+
+# --- Vie -----------------------------------------------------------------------------------
+
+## Dégâts infligés par un ennemi.
+func take_damage(amount: float) -> void:
+	if _dead or amount <= 0.0:
+		return
+	health = maxf(health - amount, 0.0)
+	_regen_delay = GameConfig.PLAYER_REGEN_DELAY
+	camera.add_trauma(GameConfig.SHAKE_PLAYER_HURT)
+	health_changed.emit(health, GameConfig.PLAYER_MAX_HEALTH)
+	hurt.emit()
+	if health <= 0.0:
+		_die()
+
+
+func is_dead() -> bool:
+	return _dead
+
+
+## Cible valable pour les ennemis tant qu'il est vivant.
+func is_targetable() -> bool:
+	return not _dead
+
+
+func get_target_radius() -> float:
+	return 0.4
+
+
+## Mort : le péon lâche sa charge et réapparaît au point de départ après un délai.
+func _die() -> void:
+	_dead = true
+	_respawn_timer = GameConfig.PLAYER_RESPAWN_TIME
+	carrier.drop_all()
+	died.emit()
+
+
+func _update_health(delta: float) -> void:
+	if _dead:
+		_respawn_timer -= delta
+		if _respawn_timer <= 0.0:
+			_dead = false
+			global_transform = _spawn_transform
+			velocity = Vector3.ZERO
+			_pitch = 0.0
+			health = GameConfig.PLAYER_MAX_HEALTH
+			stamina = GameConfig.MAX_STAMINA
+			health_changed.emit(health, GameConfig.PLAYER_MAX_HEALTH)
+			respawned.emit()
+		return
+	if _regen_delay > 0.0:
+		_regen_delay -= delta
+	elif health < GameConfig.PLAYER_MAX_HEALTH:
+		health = minf(health + GameConfig.PLAYER_REGEN * delta, GameConfig.PLAYER_MAX_HEALTH)
+		health_changed.emit(health, GameConfig.PLAYER_MAX_HEALTH)
+
+
+## Secondes restantes avant la réapparition (0 si vivant).
+func get_respawn_time() -> float:
+	return maxf(_respawn_timer, 0.0) if _dead else 0.0
 
 
 ## Pénalité de vitesse proportionnelle à la charge : jusqu'à -35 % à pleine capacité.

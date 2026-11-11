@@ -1,20 +1,20 @@
 extends Node
-## Touches de test, en attendant le Général et les ennemis : K inflige des dégâts au bâtiment du
-## camp le plus proche du joueur (comme une attaque ennemie), B ordonne sa (re)construction.
-## À retirer de la scène quand ces systèmes existeront.
+## Touches de test : K inflige des dégâts au bâtiment du camp le plus proche du joueur,
+## N lance tout de suite la vague ennemie suivante. À retirer pour une version publiée.
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
 		return
-	var building := _nearest_building()
-	if building == null:
-		return
 	if key.physical_keycode == KEY_K:
-		building.take_damage(GameConfig.DEBUG_BUILDING_DAMAGE)
-	elif key.physical_keycode == KEY_B and building.state != CampBuilding.State.UNDER_CONSTRUCTION:
-		building.begin_construction()
+		var building := _nearest_building()
+		if building:
+			building.take_damage(GameConfig.DEBUG_BUILDING_DAMAGE)
+	elif key.physical_keycode == KEY_N:
+		var director := get_tree().get_first_node_in_group("game_director") as GameDirector
+		if director:
+			director.start_next_wave()
 
 
 func _nearest_building() -> CampBuilding:

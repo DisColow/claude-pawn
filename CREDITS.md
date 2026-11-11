@@ -4,7 +4,8 @@ Tous les assets tiers sont sous licence libre. Les fichiers ont été modifiés 
 
 | Asset | Fichiers du projet | Auteur / source | Licence |
 |---|---|---|---|
-| Medieval Hexagon Pack (scierie, étapes de chantier, échafaudage, ruines) | `assets/models/buildings/*` | Kay Lousberg — [KayKit Medieval Hexagon Pack](https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) | CC0 |
+| Medieval Hexagon Pack (bastion, scierie, tour, caserne, mine, étapes de chantier, échafaudage, ruines) | `assets/models/buildings/*` | Kay Lousberg — [KayKit Medieval Hexagon Pack](https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) | CC0 |
+| Skeletons Character Pack (squelettes animés, lame, hache) | `assets/models/enemies/*` | Kay Lousberg — [KayKit Skeletons](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0) | CC0 |
 | Forest Nature Pack (arbres, rochers, buissons, herbe) | `assets/models/trees/*`, `assets/models/nature/*` | Kay Lousberg — [KayKit Forest Nature Pack](https://kaylousberg.itch.io/kaykit-forest) | CC0 |
 | Universal Base Characters (corps de l'orc) | `assets/models/characters/orc_worker.glb` | [Quaternius](https://quaternius.itch.io/universal-base-characters) | CC0 |
 | Universal Animation Library (idle, marche, course, sprint, saut…) | `assets/models/characters/orc_worker.glb` | [Quaternius](https://quaternius.itch.io/universal-animation-library) | CC0 |

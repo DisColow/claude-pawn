@@ -19,7 +19,7 @@ Jeu FPS « péon orc » dans un RTS, **Godot 4.7.2** (Forward+, Jolt). Cahier de
 - Valeurs d'équilibrage **uniquement** dans `scripts/core/game_config.gd` (constantes, commentées en français).
 - Commentaires et docstrings en français, style `##` de GDScript. Typage statique partout (les avertissements GDScript doivent rester à zéro).
 - Autoloads à état (ex. `CampEconomy`) : y accéder par `Classe.instance`, jamais par le nom de l'autoload (introuvable à la compilation des tests lancés avec `-s`).
-- Couches physiques : 1 world, 2 player, 3 trees (valeur 4), 4 logs (valeur 8).
+- Couches physiques : 1 world, 2 player, 3 trees (valeur 4), 4 logs (valeur 8), 5 units (valeur 16 : squelettes et grunts).
 - Éléments de la vue subjective : passer par `ZClip.apply()`.
 - **Avant chaque commit qui touche des scènes, des assets ou `project.godot` : lancer `tools/resave_with_editor.sh`.**
   Il fait passer le vrai éditeur Godot (réimport, détection 3D des textures, scènes réenregistrées avec
@@ -50,10 +50,13 @@ Scripts dans `tests/` (en-tête de chaque fichier = usage) :
 - `pickup_test.gd` — ramassage des bûches (E) : disparition en fumée, pile 1→10, ralentissement, charge pleine.
 - `deposit_test.gd` — pile de bois seule (E dans la zone) : vol des rondins, stock global, pile qui grandit, collision.
 - `building_test.gd` — scierie : chantier par étapes, points de vie, dépôt refusé hors « debout », dégâts, destruction, reconstruction.
+- `game_test.gd` — partie complète dans la forêt : ordres du Général, mine d'or, construction par le péon, grunts, vague, tours, combat et mort du joueur, défaite (argument `victory` : victoire). Long (~5 min).
 - `props_test.gd` — rocher bloquant, buisson traversable qui froisse.
 - `preview.gd` — aperçu de modèles/scènes.
 
 Écrire les captures dans le scratchpad et **les regarder** (Read) avant de conclure. Ne jamais affirmer qu'un son est bon : il ne peut pas être écouté ici.
+
+> Dans les tests, la souris n'est pas capturée : déclencher les coups avec `player.axe.request_swing()`, pas avec l'action `attack`.
 
 ## Assets
 

@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://b7fo6dystmfgu"]
+
+[ext_resource type="Script" uid="uid://blyoykcl3uuhp" path="res://scripts/world/gold_mine.gd" id="1_script"]
+
+[sub_resource type="BoxShape3D" id="Box_body"]
+size = Vector3(5.6, 5, 6.8)
+
+[sub_resource type="BoxShape3D" id="Box_zone"]
+size = Vector3(11, 3, 12)
+
+[node name="GoldMine" type="StaticBody3D" unique_id=2068131990]
+collision_mask = 0
+script = ExtResource("1_script")
+
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1649326680]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("Box_body")
+
+[node name="Zone" type="Area3D" parent="." unique_id=1595520550]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="Shape" type="CollisionShape3D" parent="Zone" unique_id=1989474384]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("Box_zone")

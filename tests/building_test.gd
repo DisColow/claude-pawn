@@ -36,6 +36,7 @@ func run() -> void:
 	world.add_child(load("res://scenes/ui/hud.tscn").instantiate())
 	var mill: LumberMill = load("res://scenes/camp/lumber_mill.tscn").instantiate()
 	mill.starts_built = false
+	mill.auto_build = true
 	world.add_child(mill)
 	mill.global_position = Vector3(0, 0, -12)
 	mill.build_time = 6.0

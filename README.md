@@ -4,13 +4,24 @@
 
 Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (Forward+)**, cible Windows.
 
-## État du MVP
+## Le jeu
 
-| Étape | Statut |
+Tu es le péon d'un camp orc dirigé par une IA, le **Général**. Il décide quoi bâtir et te donne ses ordres
+(en haut de l'écran) ; toi, tu coupes le bois, tu mines l'or, tu construis ses bâtiments et tu défends ta peau.
+Des vagues de squelettes arrivent par la route du nord. **Victoire** si le camp repousse les 8 vagues,
+**défaite** si le bastion tombe.
+
+| Élément | Rôle |
 |---|---|
-| Découpe de bois (§3.1 de la spec) + joueur FPS minimal | ✅ |
-| Ramassage (E) et portage des bûches sur l'épaule (§3.2) | ✅ |
-| Dépôt au camp (§3.3) | ✅ |
+| Bastion | Cœur du camp. On dépose le bois et l'or dans sa cour. S'il est détruit, c'est perdu. |
+| Mine d'or (à l'est) | Maintenir E pour remplir un sac de 10 or, à rapporter au bastion. |
+| Scierie | Premier bâtiment du plan ; second dépôt de bois. |
+| Tours de guet | Tirent sur les squelettes à portée. |
+| Caserne | Le Général y lève des grunts (25 or chacun, 6 au plus) qui défendent le camp. |
+
+Le Général paie chaque bâtiment avec le stock du camp et pose le chantier ; le péon le construit en
+maintenant E à côté. Un bâtiment détruit est recommandé par le Général (il faut le repayer et le rebâtir).
+Le péon a 100 points de vie, se bat à la hache, et réapparaît au camp 6 secondes après sa mort en perdant sa charge.
 
 ## Lancer
 
@@ -25,7 +36,9 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 | Coup de hache | Clic gauche (maintenir = coups enchaînés) |
 | Ramasser une bûche (en la visant) | E |
 | Déposer le bois (dans la zone du dépôt) | E |
-| *Test* : attaquer la scierie (-300 PV) / ordonner sa (re)construction | K / B |
+| Miner l'or / construire un chantier | E (maintenir) |
+| Rejouer (écran de fin) | R |
+| *Test* : -300 PV au bâtiment le plus proche / lancer la vague suivante | K / N |
 | Libérer / recapturer la souris | Échap / clic |
 
 ## Ce qui est implémenté
@@ -36,9 +49,11 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 
 **Ramassage** — viser une bûche affiche « [E] Ramasser ». La bûche disparaît dans un nuage de fumée façon ninja, avec le « clac » d'une bûche qui en cogne une autre, et apparaît aussitôt sur la pile de l'épaule gauche, tenue par la main gauche : la pile grossit de 1 à 10 (4 + 4 + 2) en périphérie gauche de l'écran, tenue par la main gauche. La hache reste utilisable, la charge ralentit (-35 % à 10), « Charge pleine » à 10/10.
 
-**Scierie** — le bois se dépose à la scierie du camp (`LumberMill`, un `CampBuilding`) : 1200 points de vie, nom et barre de vie au-dessus. Elle se construit par étapes sous échafaudage (les points de vie montent avec le chantier), peut être détruite (`take_damage`, ruines) puis reconstruite (`begin_construction`). On ne peut déposer que si elle est debout. En attendant le Général et les ennemis, K et B simulent une attaque et un ordre de construction.
+**Bâtiments** — `CampBuilding` : points de vie, nom et barre de vie au-dessus, chantier par étapes sous échafaudage (les points de vie montent avec le travail du péon), ruines à zéro point de vie, reconstruction. Valeurs dans `GameConfig.BUILDINGS`.
 
-**Dépôt au camp** — la pile de bois (quatre piquets dans la cour de la scierie) affiche « [E] Déposer le bois (n) » dès qu'on entre dans sa zone avec du bois. Les rondins quittent l'épaule un par un et volent jusqu'à la pile, qui grandit (3 tas en pyramide de 28 rondins, solides) ; le stock global du camp (`CampEconomy`) s'affiche en haut à gauche. `STOCKPILE_AUTO_DEPOSIT` permet de décharger sans appuyer sur E.
+**Général, vagues, unités** — `General` (plan de construction, recrutement), `GameDirector` (vagues, victoire, défaite), `Unit` (squelettes et grunts : choix de cible, déplacement, corps à corps), `WatchTower` (tir).
+
+**Dépôt au camp** — la pile de bois (quatre piquets dans la cour du bastion et de la scierie) affiche « [E] Déposer le bois (n) » dès qu'on entre dans sa zone avec du bois. Les rondins quittent l'épaule un par un et volent jusqu'à la pile, qui grandit (3 tas en pyramide de 28 rondins, solides) ; le stock global du camp (`CampEconomy`) s'affiche en haut à gauche. `STOCKPILE_AUTO_DEPOSIT` permet de décharger sans appuyer sur E.
 
 **Joueur** — corps d'orc complet animé (idle/marche/course/sprint/saut), visible en regardant vers le bas sans masquer le sol ; ombre portée complète (tête et hache comprises) ; bruits de pas cadencés ; endurance du sprint ; pénalité de charge déjà câblée (`get_carry_speed_multiplier`, -35 % à 10 rondins). Le bras droit tient la hache par IK, le coup est animé procéduralement en espace caméra. Bras, hache et corps utilisent le **Z-Clip Depth Scaling** (`use_z_clip_scale`, `z_clip_scale = 0.1`).
 
@@ -48,11 +63,14 @@ Toutes les valeurs d'équilibrage et de *game feel* sont dans `scripts/core/game
 
 ```
 assets/        modèles, sons, textures (voir CREDITS.md)
-scenes/        player/, trees/, props/, camp/, vfx/, ui/, world/
+scenes/        player/, trees/, props/, camp/, units/, vfx/, ui/, world/
 scripts/
-  core/        GameConfig et CampEconomy (autoloads), ZClip
-  camp/        CampBuilding, LumberMill, WoodStockpile
-  debug/       touches de test (K / B)
+  core/        GameConfig et CampEconomy (autoloads), GameDirector, ZClip
+  camp/        CampBuilding, Bastion, LumberMill, WatchTower, WoodStockpile
+  units/       Unit (squelettes, grunts)
+  ai/          General
+  world/       GoldMine
+  debug/       touches de test (K / N)
   player/      Player, FirstPersonBody (+ modificateurs de squelette), AxeController, CameraShake
   trees/       ChoppableTree
   props/       WoodLog

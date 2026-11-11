@@ -14,6 +14,8 @@ const ROW_STEP := 0.255
 const ROW_HEIGHT := 0.217
 
 @export var drop_sounds: Array[AudioStream] = []
+## true = on peut aussi y déposer l'or (cour du bastion).
+@export var accepts_gold := false
 
 ## false = on ne peut plus rien y déposer (scierie en chantier ou détruite).
 var enabled := true:

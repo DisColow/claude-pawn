@@ -18,7 +18,7 @@ height = 1.9
 
 [node name="Player" type="CharacterBody3D" unique_id=752087051 groups=["player"]]
 collision_layer = 2
-collision_mask = 5
+collision_mask = 21
 floor_snap_length = 0.3
 script = ExtResource("1_player")
 footstep_sounds = Array[AudioStream]([ExtResource("5_fs0"), ExtResource("6_fs1"), ExtResource("7_fs2"), ExtResource("8_fs3"), ExtResource("9_fs4")])

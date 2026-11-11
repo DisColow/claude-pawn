@@ -80,6 +80,7 @@ ui_release_mouse={
 3d_physics/layer_2="player"
 3d_physics/layer_3="trees"
 3d_physics/layer_4="logs"
+3d_physics/layer_5="units"
 
 [physics]
 

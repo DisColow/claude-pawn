@@ -100,7 +100,7 @@ func _resolve_hit() -> void:
 	var space := get_world_3d().direct_space_state
 	var from := camera.global_position
 	var to := from - camera.global_basis.z * GameConfig.AXE_RANGE
-	var query := PhysicsRayQueryParameters3D.create(from, to, 1 | 4)
+	var query := PhysicsRayQueryParameters3D.create(from, to, 1 | 4 | 16)
 	query.exclude = [owner.get_rid()] if owner is CollisionObject3D else []
 	var result := space.intersect_ray(query)
 	if result.is_empty() or not result.collider.has_method("take_hit"):

@@ -4,9 +4,14 @@ extends Node3D
 ## Ramassage « ninja » : la bûche visée disparaît dans un nuage de fumée et réapparaît aussitôt
 ## sur la pile, avec le « clac » d'une bûche qui en cogne une autre. La main gauche tient la pile tant qu'on porte du bois.
 ## Dans la zone d'un `WoodStockpile`, E décharge la pile rondin par rondin (du haut vers le bas).
+## Ce nœud gère aussi les autres actions du péon avec E : miner l'or (maintenir E dans une mine,
+## le sac se dépose au bastion) et construire (maintenir E près d'un chantier du Général).
 
 signal prompt_changed(text: String)
 signal load_changed(count: int, capacity: int)
+signal gold_changed(amount: int)
+## Avancement d'une action maintenue (minage, construction) : de 0 à 1, -1 = aucune action.
+signal progress_changed(ratio: float)
 
 const LOG_MODEL := preload("res://assets/models/props/wood_log.glb")
 const POOF_SCENE := preload("res://scenes/vfx/poof_vfx.tscn")
@@ -30,6 +35,8 @@ const ELBOW_POLE_OFFSET := Vector3(-0.45, -0.45, 0.15)
 
 ## Nombre de bûches portées.
 var count := 0
+## Or porté (un sac à la fois).
+var gold := 0
 
 var _target: WoodLog
 var _prompt := ""
@@ -47,7 +54,15 @@ var _unloading := false
 var _unload_timer := 0.0
 ## Choc de bois du ramassage, non spatialisé (la pile est sur l'épaule du joueur).
 var _pickup_audio: AudioStreamPlayer
+## Mine dans la zone de laquelle se trouve le joueur, et temps de minage accumulé.
+var _mine: GoldMine
+var _mining_time := 0.0
+## Chantier à portée (null si aucun).
+var _site: CampBuilding
+var _progress := -1.0
+var _work_sound_timer := 0.0
 
+@onready var _player: Player = owner
 @onready var _body: FirstPersonBody = owner.get_node("Body")
 @onready var _camera: Camera3D = owner.get_node("Head/Camera3D")
 
@@ -68,11 +83,42 @@ func _physics_process(delta: float) -> void:
 	if _stack_root.is_inside_tree():
 		_stack_root.position = _body.get_left_shoulder_local() + STACK_OFFSET
 	_update_target()
-	if Input.is_action_just_pressed("interact"):
-		if _target and count < GameConfig.BASE_WOOD_CAPACITY:
-			pick_up(_target)
-		elif _stockpile and count > 0:
-			_unloading = true
+	_site = _find_site()
+	var can_pick := _target != null and count < GameConfig.BASE_WOOD_CAPACITY
+	var can_deposit := _stockpile != null and (count > 0 or (gold > 0 and _stockpile.accepts_gold))
+	var progress := -1.0
+	if _player.is_dead():
+		_unloading = false
+	elif Input.is_action_just_pressed("interact") and can_pick:
+		pick_up(_target)
+	elif Input.is_action_just_pressed("interact") and can_deposit:
+		_unloading = count > 0
+		if gold > 0 and _stockpile.accepts_gold:
+			CampEconomy.instance.add_gold(gold)
+			gold = 0
+			gold_changed.emit(gold)
+			_play_knock(1.6)
+	elif Input.is_action_pressed("interact") and not can_pick and not can_deposit:
+		if _site:
+			_site.work(delta)
+			progress = _site.build_progress
+			_work_feedback(delta)
+		elif _mine and gold == 0:
+			_mining_time += delta
+			progress = _mining_time / GameConfig.MINING_TIME
+			_work_feedback(delta)
+			if _mining_time >= GameConfig.MINING_TIME:
+				_mining_time = 0.0
+				progress = -1.0
+				gold = GameConfig.GOLD_PER_TRIP
+				gold_changed.emit(gold)
+				_play_knock(1.6)
+	if progress < 0.0:
+		_mining_time = 0.0
+	if progress != _progress:
+		_progress = progress
+		progress_changed.emit(progress)
+	_update_prompt(can_pick, can_deposit)
 	_update_unload(delta)
 	_update_pop(delta)
 	_hold_stack(delta)
@@ -87,11 +133,29 @@ func _update_target() -> void:
 	_target = hit.collider as WoodLog if not hit.is_empty() else null
 	if _target and _target.is_queued_for_deletion():
 		_target = null
+
+
+func _update_prompt(can_pick: bool, can_deposit: bool) -> void:
 	var text := ""
-	if _target and count < GameConfig.BASE_WOOD_CAPACITY:
+	if _player.is_dead():
+		text = ""
+	elif can_pick:
 		text = "[E] Ramasser"
-	elif _stockpile and count > 0:
-		text = "" if _unloading else "[E] Déposer le bois (%d)" % count
+	elif can_deposit:
+		if _unloading:
+			text = ""
+		elif count > 0 and gold > 0 and _stockpile.accepts_gold:
+			text = "[E] Déposer le bois (%d) et l'or (%d)" % [count, gold]
+		elif count > 0:
+			text = "[E] Déposer le bois (%d)" % count
+		else:
+			text = "[E] Déposer l'or (%d)" % gold
+	elif _site:
+		text = "[E] Construire : %s (maintenir)" % _site.building_name
+	elif _mine and gold == 0:
+		text = "[E] Miner l'or (maintenir)"
+	elif _mine:
+		text = "Sac plein : rapporte l'or au bastion"
 	elif _target:
 		text = "Charge pleine (%d/%d)" % [count, GameConfig.BASE_WOOD_CAPACITY]
 	_set_prompt(text)
@@ -140,6 +204,62 @@ func _update_pop(delta: float) -> void:
 	_popping.transform = Transform3D(slot.basis.scaled(Vector3.ONE * maxf(bounce, 0.001)), slot.origin)
 	if t >= 1.0:
 		_popping = null
+
+
+# --- Mine et chantiers -------------------------------------------------------------------------
+
+## Appelé par la mine quand le joueur entre dans sa zone / en sort.
+func enter_mine(mine: GoldMine) -> void:
+	_mine = mine
+
+
+func exit_mine(mine: GoldMine) -> void:
+	if _mine == mine:
+		_mine = null
+
+
+## Chantier du camp le plus proche à portée de travail.
+func _find_site() -> CampBuilding:
+	var nearest: CampBuilding = null
+	var best := GameConfig.BUILD_RANGE
+	for node in get_tree().get_nodes_in_group("camp_buildings"):
+		var building := node as CampBuilding
+		if building.state != CampBuilding.State.UNDER_CONSTRUCTION:
+			continue
+		var distance := Vector2(building.global_position.x - global_position.x,
+			building.global_position.z - global_position.z).length() - building.get_target_radius()
+		if distance < best:
+			best = distance
+			nearest = building
+	return nearest
+
+
+## Pendant qu'on mine ou qu'on construit : coups d'outil réguliers (animation de la hache + choc).
+func _work_feedback(delta: float) -> void:
+	_player.axe.request_swing()
+	_work_sound_timer -= delta
+	if _work_sound_timer <= 0.0:
+		_work_sound_timer = GameConfig.AXE_SWING_DURATION
+		_play_knock(0.9)
+
+
+func _play_knock(pitch: float) -> void:
+	_pickup_audio.stream = PICKUP_SOUNDS.pick_random()
+	_pickup_audio.pitch_scale = pitch + randf_range(-GameConfig.PICKUP_SOUND_PITCH_JITTER, GameConfig.PICKUP_SOUND_PITCH_JITTER)
+	_pickup_audio.play()
+
+
+## Le joueur est mort : il perd ce qu'il portait.
+func drop_all() -> void:
+	for carried in _stack:
+		carried.queue_free()
+	_stack.clear()
+	_popping = null
+	_unloading = false
+	count = 0
+	gold = 0
+	load_changed.emit(count, GameConfig.BASE_WOOD_CAPACITY)
+	gold_changed.emit(gold)
 
 
 # --- Dépôt au camp ----------------------------------------------------------------------------

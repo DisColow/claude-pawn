@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://d4boc56ujh6jx"]
+[gd_scene format=3 uid="uid://c2aluk5x55hde"]
 
 [ext_resource type="Script" uid="uid://dd27dqh02tytf" path="res://scripts/camp/lumber_mill.gd" id="1_script"]
 [ext_resource type="PackedScene" uid="uid://cm5v03bw0fmww" path="res://assets/models/buildings/building_lumbermill_red.gltf" id="2_built"]
@@ -12,10 +12,9 @@
 [ext_resource type="AudioStream" uid="uid://dt361m403ojd2" path="res://assets/sounds/axe/axe_impact_3.ogg" id="10_hit"]
 [ext_resource type="AudioStream" uid="uid://d0udo0p16qd68" path="res://assets/sounds/tree/tree_crash.ogg" id="11_collapse"]
 
-[node name="LumberMill" type="StaticBody3D" unique_id=2086164161]
+[node name="LumberMill" type="StaticBody3D" unique_id=1234241178]
 collision_mask = 0
 script = ExtResource("1_script")
-building_name = "Scierie"
 built_model = ExtResource("2_built")
 stage_models = Array[PackedScene]([ExtResource("3_a"), ExtResource("4_b"), ExtResource("5_c")])
 scaffolding_model = ExtResource("6_scaffolding")
@@ -23,12 +22,12 @@ ruins_model = ExtResource("7_ruins")
 hit_sounds = Array[AudioStream]([ExtResource("9_hit"), ExtResource("10_hit")])
 collapse_sound = ExtResource("11_collapse")
 
-[node name="Collision" type="CollisionShape3D" parent="." unique_id=1948565599]
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1133360432]
 
-[node name="Yard" parent="." unique_id=1129974377 instance=ExtResource("8_yard")]
+[node name="Yard" parent="." unique_id=2016648508 instance=ExtResource("8_yard")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5.2)
 
-[node name="Audio" type="AudioStreamPlayer3D" parent="." unique_id=1180669252]
+[node name="Audio" type="AudioStreamPlayer3D" parent="." unique_id=955181497]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 unit_size = 20.0
 max_distance = 80.0

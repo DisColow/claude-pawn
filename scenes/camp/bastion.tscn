@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://bdhlmas8qh311"]
+
+[ext_resource type="Script" uid="uid://rgb5fix6e8d3" path="res://scripts/camp/bastion.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://355bmgujtchu" path="res://assets/models/buildings/building_castle_red.gltf" id="2_built"]
+[ext_resource type="PackedScene" uid="uid://drhj0dubqne72" path="res://assets/models/buildings/building_stage_A.gltf" id="3_a"]
+[ext_resource type="PackedScene" uid="uid://cdj8tg1wesu2y" path="res://assets/models/buildings/building_stage_B.gltf" id="4_b"]
+[ext_resource type="PackedScene" uid="uid://b648mr8scg0gq" path="res://assets/models/buildings/building_stage_C.gltf" id="5_c"]
+[ext_resource type="PackedScene" uid="uid://cvbnnru3jkalt" path="res://assets/models/buildings/building_scaffolding.gltf" id="6_scaffolding"]
+[ext_resource type="PackedScene" uid="uid://bo5w38ksm8a30" path="res://assets/models/buildings/building_destroyed.gltf" id="7_ruins"]
+[ext_resource type="PackedScene" uid="uid://b2rog6kllhrtk" path="res://scenes/camp/wood_stockpile.tscn" id="8_yard"]
+[ext_resource type="AudioStream" uid="uid://bx6eckgssx464" path="res://assets/sounds/axe/axe_impact_0.ogg" id="9_hit"]
+[ext_resource type="AudioStream" uid="uid://dt361m403ojd2" path="res://assets/sounds/axe/axe_impact_3.ogg" id="10_hit"]
+[ext_resource type="AudioStream" uid="uid://d0udo0p16qd68" path="res://assets/sounds/tree/tree_crash.ogg" id="11_collapse"]
+
+[node name="Bastion" type="StaticBody3D" unique_id=212784709]
+collision_mask = 0
+script = ExtResource("1_script")
+kind = "bastion"
+built_model = ExtResource("2_built")
+stage_models = Array[PackedScene]([ExtResource("3_a"), ExtResource("4_b"), ExtResource("5_c")])
+scaffolding_model = ExtResource("6_scaffolding")
+ruins_model = ExtResource("7_ruins")
+hit_sounds = Array[AudioStream]([ExtResource("9_hit"), ExtResource("10_hit")])
+collapse_sound = ExtResource("11_collapse")
+
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=727240466]
+
+[node name="Yard" parent="." unique_id=1687442426 instance=ExtResource("8_yard")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6.6)
+accepts_gold = true
+
+[node name="Audio" type="AudioStreamPlayer3D" parent="." unique_id=316881944]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+unit_size = 20.0
+max_distance = 80.0
+max_polyphony = 3
