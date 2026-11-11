@@ -2,7 +2,7 @@ class_name LogCarrier
 extends Node3D
 ## Ramassage des bûches (touche E), pile portée sur l'épaule gauche et déchargement au dépôt du camp.
 ## Ramassage « ninja » : la bûche visée disparaît dans un nuage de fumée et réapparaît aussitôt
-## sur la pile. La main gauche tient la pile tant qu'on porte du bois.
+## sur la pile, avec une note douce qui monte la gamme à chaque bûche. La main gauche tient la pile tant qu'on porte du bois.
 ## Dans la zone d'un `WoodStockpile`, E décharge la pile rondin par rondin (du haut vers le bas).
 
 signal prompt_changed(text: String)
@@ -10,6 +10,14 @@ signal load_changed(count: int, capacity: int)
 
 const LOG_MODEL := preload("res://assets/models/props/wood_log.glb")
 const POOF_SCENE := preload("res://scenes/vfx/poof_vfx.tscn")
+## Notes de ramassage, de la 1re à la 10e bûche (gamme pentatonique montante, arpège à la dernière).
+const PICKUP_SOUNDS: Array[AudioStream] = [
+	preload("res://assets/sounds/pickup/pickup_0.ogg"), preload("res://assets/sounds/pickup/pickup_1.ogg"),
+	preload("res://assets/sounds/pickup/pickup_2.ogg"), preload("res://assets/sounds/pickup/pickup_3.ogg"),
+	preload("res://assets/sounds/pickup/pickup_4.ogg"), preload("res://assets/sounds/pickup/pickup_5.ogg"),
+	preload("res://assets/sounds/pickup/pickup_6.ogg"), preload("res://assets/sounds/pickup/pickup_7.ogg"),
+	preload("res://assets/sounds/pickup/pickup_8.ogg"), preload("res://assets/sounds/pickup/pickup_9.ogg"),
+]
 ## Pile, rangées du bas vers le haut : 4 + 4 + 2 = 10 bûches (large et basse, à côté de la tête).
 const ROWS: Array[int] = [4, 4, 2]
 const LOG_RADIUS := 0.125
@@ -38,6 +46,8 @@ var _stockpile: WoodStockpile
 ## Déchargement en cours et temps restant avant le prochain rondin.
 var _unloading := false
 var _unload_timer := 0.0
+## Note de ramassage, non spatialisée (récompense pour le joueur, toujours nette).
+var _pickup_audio: AudioStreamPlayer
 
 @onready var _body: FirstPersonBody = owner.get_node("Body")
 @onready var _camera: Camera3D = owner.get_node("Head/Camera3D")
@@ -47,6 +57,11 @@ func _ready() -> void:
 	_stack_root = Node3D.new()
 	_stack_root.name = "LogStack"
 	_body.add_child.call_deferred(_stack_root)
+	_pickup_audio = AudioStreamPlayer.new()
+	_pickup_audio.name = "PickupAudio"
+	_pickup_audio.volume_db = GameConfig.PICKUP_SOUND_VOLUME_DB
+	_pickup_audio.max_polyphony = 4
+	add_child(_pickup_audio)
 	load_changed.emit.call_deferred(count, GameConfig.BASE_WOOD_CAPACITY)
 
 
@@ -97,6 +112,8 @@ func pick_up(wood_log: WoodLog) -> void:
 	wood_log.get_parent().add_child(poof)
 	poof.global_transform = Transform3D(wood_log.global_basis.orthonormalized(), wood_log.global_position)
 	wood_log.queue_free()
+	_pickup_audio.stream = PICKUP_SOUNDS[mini(count, PICKUP_SOUNDS.size() - 1)]
+	_pickup_audio.play()
 
 	var carried := _make_log_visual()
 	_stack_root.add_child(carried)
