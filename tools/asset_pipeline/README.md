@@ -18,4 +18,3 @@ Les sons d'arbre (`tree_crash.ogg`, `tree_fall_thud.ogg`) sont des extraits déc
 ## Fumée du ramassage ninja
 
 - `make_poof_texture.py` : dérive `assets/vfx/poof_puff.png` (bouffée blanche opaque) de `smoke_07.png` (Kenney, CC0).
-- `make_pickup_sounds.py` : synthétise `assets/sounds/pickup/pickup_0…9.ogg` (dix notes façon marimba sur une gamme pentatonique montante, arpège à la dixième ; numpy + ffmpeg).

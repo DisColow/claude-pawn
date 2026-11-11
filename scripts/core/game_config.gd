@@ -28,7 +28,10 @@ const MAX_CARRY_SPEED_PENALTY := 0.35
 const PICKUP_RANGE := 2.3               # distance max (depuis la caméra) pour ramasser une bûche (m)
 # Ramassage « ninja » : la bûche disparaît en fumée et réapparaît sur la pile de l'épaule gauche.
 const PICKUP_POP_TIME := 0.18           # apparition (avec rebond) de la bûche sur la pile (s)
-const PICKUP_SOUND_VOLUME_DB := -5.0     # volume de la note jouée à chaque ramassage (dB)
+const PICKUP_SOUND_VOLUME_DB := -4.0     # volume du choc de bois joué à chaque ramassage (dB)
+const PICKUP_SOUND_PITCH := 1.3         # hauteur du choc (1 = son d'origine, plus = plus sec et aigu)
+const PICKUP_SOUND_PITCH_PER_LOG := 0.02  # montée de hauteur par bûche déjà portée
+const PICKUP_SOUND_PITCH_JITTER := 0.05 # variation aléatoire de hauteur (±)
 const CARRIED_LOG_SCALE := 0.5          # taille des bûches portées sur l'épaule (lisibilité de la vue)
 
 # --- Dépôt de bois du camp ---------------------------------------------------

@@ -33,7 +33,7 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 
 **Explosion en rondins** — à zéro point de vie, le tronc explose sur place : **4 rondins physiques** (`WoodLog`) sont projetés depuis le fût, surtout dans la direction du dernier coup, avec éclats, nuages de poussière et de feuilles (`DustImpactVFX`), fracas et secousse d'écran atténuée par la distance. La souche reste en place, sans collision.
 
-**Ramassage** — viser une bûche affiche « [E] Ramasser ». La bûche disparaît dans un nuage de fumée façon ninja, avec une note douce qui monte la gamme à chaque bûche (arpège à la dixième), et apparaît aussitôt sur la pile de l'épaule gauche, tenue par la main gauche : la pile grossit de 1 à 10 (4 + 4 + 2) en périphérie gauche de l'écran, tenue par la main gauche. La hache reste utilisable, la charge ralentit (-35 % à 10), « Charge pleine » à 10/10.
+**Ramassage** — viser une bûche affiche « [E] Ramasser ». La bûche disparaît dans un nuage de fumée façon ninja, avec le « clac » d'une bûche qui en cogne une autre, et apparaît aussitôt sur la pile de l'épaule gauche, tenue par la main gauche : la pile grossit de 1 à 10 (4 + 4 + 2) en périphérie gauche de l'écran, tenue par la main gauche. La hache reste utilisable, la charge ralentit (-35 % à 10), « Charge pleine » à 10/10.
 
 **Dépôt au camp** — le dépôt de bois (quatre piquets dans la clairière) affiche « [E] Déposer le bois (n) » dès qu'on entre dans sa zone avec du bois. Les rondins quittent l'épaule un par un et volent jusqu'à la pile, qui grandit (3 tas en pyramide de 28 rondins, solides) ; le stock global du camp (`CampEconomy`) s'affiche en haut à gauche et au-dessus du dépôt. `STOCKPILE_AUTO_DEPOSIT` permet de décharger sans appuyer sur E.
 
