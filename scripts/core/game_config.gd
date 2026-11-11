@@ -42,6 +42,16 @@ const STOCKPILE_FLY_ARC := 0.5          # hauteur de la cloche du vol (m)
 const STOCKPILE_STACK_BASE := 7         # rondins dans la rangée du bas d'un tas (pyramide : 7+6+…+1 = 28)
 const STOCKPILE_STACKS := 3             # nombre de tas visibles (au-delà, seul le compteur monte)
 
+# --- Bâtiments du camp --------------------------------------------------------
+const BUILDING_MODEL_SCALE := 4.5       # agrandissement des modèles de bâtiments (miniatures KayKit)
+const BUILDING_START_HEALTH_RATIO := 0.1  # part des points de vie au début du chantier (le reste monte avec la construction)
+const LUMBER_MILL_MAX_HEALTH := 1200.0  # points de vie de la scierie
+const LUMBER_MILL_BUILD_TIME := 30.0    # durée de construction de la scierie (s)
+const LUMBER_MILL_SAW_SPEED := 5.0      # rotation de la scie quand la scierie est debout (rad/s)
+const SHAKE_BUILDING_COLLAPSE := 0.8    # "trauma" à proximité d'un bâtiment qui s'effondre
+const SHAKE_BUILDING_COLLAPSE_RADIUS := 30.0
+const DEBUG_BUILDING_DAMAGE := 300.0    # dégâts infligés par la touche de test K
+
 # --- Arbres -----------------------------------------------------------------
 const TREE_MAX_HEALTH := 100.0
 const LOGS_PER_TREE := 4

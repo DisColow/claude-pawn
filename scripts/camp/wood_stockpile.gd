@@ -1,6 +1,7 @@
 class_name WoodStockpile
 extends StaticBody3D
-## Dépôt de bois du camp (§3.3) : quand le joueur est dans la zone, E décharge le bois porté.
+## Pile de bois du camp (§3.3), dans la cour de la scierie : quand le joueur est dans la zone, E
+## décharge le bois porté. La scierie la désactive (`enabled`) tant qu'elle n'est pas debout.
 ## Chaque rondin vole de l'épaule jusqu'à la pile, qui grandit (tas en pyramide, l'un après l'autre) ;
 ## le stock global (`CampEconomy.instance.wood`) est crédité dès que le rondin quitte l'épaule.
 
@@ -14,18 +15,29 @@ const ROW_HEIGHT := 0.217
 
 @export var drop_sounds: Array[AudioStream] = []
 
+## false = on ne peut plus rien y déposer (scierie en chantier ou détruite).
+var enabled := true:
+	set(value):
+		enabled = value
+		for player in _players_inside:
+			if enabled:
+				player.carrier.enter_stockpile(self)
+			else:
+				player.carrier.exit_stockpile(self)
+
 ## Rondins arrivés sur la pile (ceux en vol ne sont pas encore comptés ici).
 var landed := 0
 
 ## Rondins en vol vers la pile (leur place est déjà réservée).
 var _in_flight := 0
+## Joueurs présents dans la zone (même quand le dépôt est désactivé).
+var _players_inside: Array[Player] = []
 
 var _multimesh: MultiMesh
 var _stack_shapes: Array[CollisionShape3D] = []
 
 @onready var _logs: MultiMeshInstance3D = $Logs
 @onready var _zone: Area3D = $Zone
-@onready var _label: Label3D = $Label
 @onready var _audio: AudioStreamPlayer3D = $DropAudio
 
 
@@ -45,8 +57,6 @@ func _ready() -> void:
 		_stack_shapes.append(collision)
 	_zone.body_entered.connect(_on_zone_body_entered)
 	_zone.body_exited.connect(_on_zone_body_exited)
-	CampEconomy.instance.wood_changed.connect(_on_wood_changed)
-	_on_wood_changed(CampEconomy.instance.wood)
 
 
 ## Nombre de rondins qu'un tas peut contenir (pyramide : base, base - 1, … 1).
@@ -150,14 +160,13 @@ func _find_log_mesh() -> Mesh:
 func _on_zone_body_entered(body: Node3D) -> void:
 	var player := body as Player
 	if player:
-		player.carrier.enter_stockpile(self)
+		_players_inside.append(player)
+		if enabled:
+			player.carrier.enter_stockpile(self)
 
 
 func _on_zone_body_exited(body: Node3D) -> void:
 	var player := body as Player
 	if player:
+		_players_inside.erase(player)
 		player.carrier.exit_stockpile(self)
-
-
-func _on_wood_changed(total: int) -> void:
-	_label.text = "Dépôt de bois\n%d" % total

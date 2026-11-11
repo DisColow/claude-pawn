@@ -11,9 +11,9 @@ OUT = "scenes/world/test_forest.tscn"
 SPACING = 2.6          # pas moyen de la grille d'arbres (m)
 JITTER = 0.7           # décalage aléatoire autour de la grille (m)
 FOREST_RADIUS = 32.0   # au-delà, le brouillard prend le relais
-CLEARING = 8.5         # rayon moyen de la clairière (arbres exclus)
-DIRT_SIZE = 19.0       # taille du décalque de terre battue
-STOCKPILE = (4.6, -1.5, 1.05)  # dépôt de bois du camp dans la clairière : x, z, lacet (rad)
+CLEARING = 11.0        # rayon moyen de la clairière (arbres exclus)
+DIRT_SIZE = 25.0       # taille du décalque de terre battue
+LUMBER_MILL = (7.5, -5.0, -0.64)  # scierie du camp : x, z, lacet (rad) ; sa cour (pile de bois) est tournée vers le centre
 
 # (scène, poids, échelle min, échelle max) — majorité de sapins comme dans Lordaeron.
 SPECIES = [
@@ -67,7 +67,8 @@ trees.sort(key=lambda t: math.hypot(t[1] - 0.0, t[2] + CLEARING))
 
 ext = [("PackedScene", "res://scenes/player/player.tscn", "player"),
        ("PackedScene", "res://scenes/ui/hud.tscn", "hud"),
-       ("PackedScene", "res://scenes/camp/wood_stockpile.tscn", "stockpile"),
+       ("PackedScene", "res://scenes/camp/lumber_mill.tscn", "mill"),
+       ("Script", "res://scripts/debug/camp_debug_keys.gd", "debug_keys"),
        ("Texture2D", "res://assets/textures/dirt_clearing.png", "dirt")]
 ext += [("PackedScene", "res://scenes/trees/%s.tscn" % s[0], s[0]) for s in SPECIES]
 ext += [("PackedScene", path, key) for key, path in PROPS.items()]
@@ -162,11 +163,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 
 [node name="HUD" parent="." instance=ExtResource("%s")]
 
-[node name="WoodStockpile" parent="." instance=ExtResource("%s")]
+[node name="LumberMill" parent="." instance=ExtResource("%s")]
 transform = %s
 
+[node name="CampDebugKeys" type="Node" parent="."]
+script = ExtResource("%s")
+
 [node name="Trees" type="Node3D" parent="."]
-''' % (DIRT_SIZE, DIRT_SIZE, ids["dirt"], ids["player"], ids["hud"], ids["stockpile"], tf(*STOCKPILE)))
+''' % (DIRT_SIZE, DIRT_SIZE, ids["dirt"], ids["player"], ids["hud"], ids["mill"], tf(*LUMBER_MILL), ids["debug_keys"]))
 
 for k, (name, x, z, yaw, s) in enumerate(trees):
     out.append('[node name="Tree%03d" parent="Trees" instance=ExtResource("%s")]\ntransform = %s\n' % (k + 1, ids[name], tf(x, z, yaw, s)))

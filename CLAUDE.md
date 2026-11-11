@@ -48,7 +48,8 @@ Scripts dans `tests/` (en-tête de chaque fichier = usage) :
 - `tree_test.gd` — un arbre isolé frappé 4 fois.
 - `move_test.gd` — vitesses de marche/sprint, endurance, saut.
 - `pickup_test.gd` — ramassage des bûches (E) : disparition en fumée, pile 1→10, ralentissement, charge pleine.
-- `deposit_test.gd` — dépôt au camp (E dans la zone) : vol des rondins, stock global, pile qui grandit, collision.
+- `deposit_test.gd` — pile de bois seule (E dans la zone) : vol des rondins, stock global, pile qui grandit, collision.
+- `building_test.gd` — scierie : chantier par étapes, points de vie, dépôt refusé hors « debout », dégâts, destruction, reconstruction.
 - `props_test.gd` — rocher bloquant, buisson traversable qui froisse.
 - `preview.gd` — aperçu de modèles/scènes.
 
