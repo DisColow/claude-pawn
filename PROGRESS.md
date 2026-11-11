@@ -6,8 +6,8 @@
 ## Où on en est
 
 - **Branche de travail** : `feature/decoupe-bois` (seule branche du dépôt `DisColow/claude-pawn` ; `main` n'existe pas encore — décision en attente, voir plus bas).
-- **Fait** : §3.1 découpe de bois (validée par l'utilisateur) et §3.2 ramassage/portage des bûches (ramassage « ninja » en fumée, à valider en jeu par l'utilisateur).
-- **Prochaine étape probable** : §3.3 dépôt au camp (zone de stockage, E pour décharger, stock global, pile du camp qui grandit).
+- **Fait** : tout le MVP du cahier des charges — §3.1 découpe de bois (validée par l'utilisateur), §3.2 ramassage/portage (ramassage « ninja ») et §3.3 dépôt au camp (**à valider en jeu par l'utilisateur**).
+- **Prochaine étape** : retours de l'utilisateur sur le dépôt ; ensuite, la suite de la vision (§1 : or, construction, défense, Général) n'est pas encore spécifiée.
 
 ## Fait
 
@@ -19,7 +19,8 @@
 | VFX | `WoodChipsVFX` (7 éclats d'écorce discrets), `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`), `PoofVFX` (disparition en fumée) | `scripts/vfx/`, `scenes/vfx/` |
 | Joueur | Orc avec **oreilles pointues et défenses** (`OrcHeadParts`, modèles CC-BY greffés sur l'os Head ; visibles dans l'ombre, la tête étant masquée en vue subjective). CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
 | Ramassage / portage | `LogCarrier` (enfant du joueur) : viser une bûche (rayon caméra, 2,3 m) → « [E] Ramasser ». **Ramassage « ninja »** : la bûche disparaît instantanément dans un nuage de fumée blanche (`PoofVFX` : bouffées opaques qui gonflent d'un coup + anneau de petites bouffées, son « poof » synthétisé) et apparaît sur la pile avec un petit rebond. Aucun temps mort : on peut bouger et frapper pendant. Pile sur l'épaule gauche (4+4+2, bûches à 50 %), z-clip + copie d'ombre, **main gauche (2e `TwoBoneIK3D`) qui la tient**. Capacité 10, « Charge pleine », pénalité -35 %. | `scripts/player/log_carrier.gd`, `scenes/vfx/poof_vfx.tscn` |
-| HUD | Réticule, jauge d'endurance, invite de ramassage, compteur « Bois : n / 10 » | `scenes/ui/hud.tscn` |
+| Dépôt au camp | `WoodStockpile` dans la clairière (4 piquets, étiquette 3D « Dépôt de bois n »). Dans sa zone (Area3D, 7 × 5,4 m) avec du bois : « [E] Déposer le bois (n) ». Les rondins partent de l'épaule un par un (0,09 s) et **volent en cloche jusqu'à la pile**, qui grandit : 3 tas en pyramide de 28 (MultiMesh, 84 visibles ; au-delà seul le compteur monte), une boîte de collision par tas. Sortir de la zone interrompt le déchargement (le reste est gardé). Stock global : autoload `Camp` (`CampEconomy.instance.wood`, signal `wood_changed`), crédité quand le rondin quitte l'épaule. | `scripts/camp/wood_stockpile.gd`, `scenes/camp/wood_stockpile.tscn`, `scripts/core/camp_economy.gd` |
+| HUD | Réticule, jauge d'endurance, invite (ramassage / dépôt), compteur « Bois : n / 10 », stock « Camp — Bois : n » | `scenes/ui/hud.tscn` |
 | Décor | **Rochers solides** (`SolidProp` : collision convexe calculée depuis le mesh, en cache) ; **buissons traversables qui froissent** (`RustlingBush` : son de feuilles + frémissement, répété tant qu'on s'y déplace). | `scripts/props/`, `scenes/props/` |
 | Monde | Forêt de test **façon Warcraft 3** générée par `tools/level_gen/gen_test_forest.py` : clairière de terre battue (décalque) au centre, **504 arbres coupables** serrés (grille perturbée, pas 2,6 m ; 85 % de sapins `tree_4_c`), rochers solides, buissons qui froissent, herbe ; soleil haut (70°) dans le dos du joueur, clairière ensoleillée. Rayons de tronc mis en cache par modèle, oscillation calculée seulement quand un arbre bouge. | `scenes/world/test_forest.tscn`, `tools/level_gen/` |
 | Assets | KayKit, Quaternius, Kenney, OpenGameArt (CC0 sauf `tree_crash.ogg` CC-BY 3.0) | `CREDITS.md`, `tools/asset_pipeline/` |
@@ -37,17 +38,21 @@
 - **Forêt dense façon Warcraft 3** (référence : captures de WC3 Reforged fournies le 2026-11-07) : la scène de test se régénère avec le script, ne pas l'éditer à la main.
 - **Ramassage de la main droite** (2026-11-08) : la main gauche, qui tient la pile sur l'épaule, ne doit jamais la lâcher (sinon les bûches tomberaient) ; l'orc range donc sa hache à la ceinture pour ramasser.
 - **Ramassage « ninja » en fumée** (2026-11-11) : l'utilisateur a abandonné l'animation de ramassage (main droite, hache à la ceinture, accroupissement) au profit d'une disparition en fumée façon Naruto ; la bûche apparaît directement sur la pile. L'ancienne animation reste consultable dans l'historique git (commit `4dbd985`).
+- **Dépôt avec E dans la zone** (2026-11-11, choix de Claude, à confirmer) : la spec dit « approcher du dépôt ou appuyer sur E » ; E a été retenu par cohérence avec le ramassage. `STOCKPILE_AUTO_DEPOSIT = true` dans `GameConfig` décharge dès l'entrée dans la zone.
+- **`CampEconomy.instance`** plutôt que le nom de l'autoload : celui-ci n'existe pas quand Godot compile un script lancé avec `-s`, ce qui cassait tous les tests.
 - **Après l'explosion, la souche n'a plus de collision** (demandé le 2026-11-07).
 - **Tous les arbres sont coupables** (plus d'arbres de décor), demandé le 2026-11-07.
 - Les arbres sont découpés hors-ligne (Blender) en souche + tronc ; les normales d'origine sont conservées (sinon anneau/traînées visibles à la jonction).
 
 ## Questions ouvertes (à poser à l'utilisateur)
 
-1. Créer `main` à partir de la branche actuelle et travailler ensuite par branches de fonctionnalité + PR ?
+1. Dépôt : garder E, ou décharger automatiquement en approchant (`STOCKPILE_AUTO_DEPOSIT`) ?
+2. Créer `main` à partir de la branche actuelle et travailler ensuite par branches de fonctionnalité + PR ?
 
 ## Problèmes connus / dette
 
 - Le son n'a jamais été écouté (pas de carte son dans l'environnement cloud) → à valider par l'utilisateur.
+- Le stock du camp n'est pas sauvegardé (remis à zéro à chaque lancement).
 - Performances non mesurées (rendu logiciel llvmpipe ici).
 - Ligne de pointillés d'1 pixel possible à la coupe souche/tronc sous certains angles.
 - En marche arrière, les épaules peuvent remonter dans le champ de vision.
@@ -72,3 +77,4 @@
 | 2026-11-08 | `656bf58` | Ramassage de la main droite : hache rangée à la ceinture, main gauche qui ne lâche jamais la pile |
 | 2026-11-11 | `4dbd985` | Poignet corrigé pendant le ramassage (max 58° au lieu de ~100°), hache en travers de la ceinture, test `wrist_test` |
 | 2026-11-11 | `e38bee7` | Ramassage « ninja » : la bûche disparaît en fumée et apparaît sur la pile (animation de ramassage retirée) |
+| 2026-11-11 | `HASH` | Dépôt au camp (§3.3) : zone de stockage, E pour décharger, rondins qui volent jusqu'à la pile, stock global, HUD, test `deposit_test` |

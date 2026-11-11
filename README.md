@@ -10,7 +10,7 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 |---|---|
 | Découpe de bois (§3.1 de la spec) + joueur FPS minimal | ✅ |
 | Ramassage (E) et portage des bûches sur l'épaule (§3.2) | ✅ |
-| Dépôt au camp (§3.3) | à venir |
+| Dépôt au camp (§3.3) | ✅ |
 
 ## Lancer
 
@@ -24,6 +24,7 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 | Sauter | Espace |
 | Coup de hache | Clic gauche (maintenir = coups enchaînés) |
 | Ramasser une bûche (en la visant) | E |
+| Déposer le bois (dans la zone du dépôt) | E |
 | Libérer / recapturer la souris | Échap / clic |
 
 ## Ce qui est implémenté
@@ -34,6 +35,8 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 
 **Ramassage** — viser une bûche affiche « [E] Ramasser ». La bûche disparaît dans un nuage de fumée façon ninja (« poof ») et apparaît aussitôt sur la pile de l'épaule gauche, tenue par la main gauche : la pile grossit de 1 à 10 (4 + 4 + 2) en périphérie gauche de l'écran, tenue par la main gauche. La hache reste utilisable, la charge ralentit (-35 % à 10), « Charge pleine » à 10/10.
 
+**Dépôt au camp** — le dépôt de bois (quatre piquets dans la clairière) affiche « [E] Déposer le bois (n) » dès qu'on entre dans sa zone avec du bois. Les rondins quittent l'épaule un par un et volent jusqu'à la pile, qui grandit (3 tas en pyramide de 28 rondins, solides) ; le stock global du camp (`CampEconomy`) s'affiche en haut à gauche et au-dessus du dépôt. `STOCKPILE_AUTO_DEPOSIT` permet de décharger sans appuyer sur E.
+
 **Joueur** — corps d'orc complet animé (idle/marche/course/sprint/saut), visible en regardant vers le bas sans masquer le sol ; ombre portée complète (tête et hache comprises) ; bruits de pas cadencés ; endurance du sprint ; pénalité de charge déjà câblée (`get_carry_speed_multiplier`, -35 % à 10 rondins). Le bras droit tient la hache par IK, le coup est animé procéduralement en espace caméra. Bras, hache et corps utilisent le **Z-Clip Depth Scaling** (`use_z_clip_scale`, `z_clip_scale = 0.1`).
 
 Toutes les valeurs d'équilibrage et de *game feel* sont dans `scripts/core/game_config.gd`.
@@ -42,9 +45,10 @@ Toutes les valeurs d'équilibrage et de *game feel* sont dans `scripts/core/game
 
 ```
 assets/        modèles, sons, textures (voir CREDITS.md)
-scenes/        player/, trees/, props/, vfx/, ui/, world/
+scenes/        player/, trees/, props/, camp/, vfx/, ui/, world/
 scripts/
-  core/        GameConfig (autoload), ZClip
+  core/        GameConfig et CampEconomy (autoloads), ZClip
+  camp/        WoodStockpile
   player/      Player, FirstPersonBody (+ modificateurs de squelette), AxeController, CameraShake
   trees/       ChoppableTree
   props/       WoodLog

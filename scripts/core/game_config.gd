@@ -30,6 +30,14 @@ const PICKUP_RANGE := 2.3               # distance max (depuis la caméra) pour 
 const PICKUP_POP_TIME := 0.18           # apparition (avec rebond) de la bûche sur la pile (s)
 const CARRIED_LOG_SCALE := 0.5          # taille des bûches portées sur l'épaule (lisibilité de la vue)
 
+# --- Dépôt de bois du camp ---------------------------------------------------
+const STOCKPILE_AUTO_DEPOSIT := false   # true = décharger dès qu'on entre dans la zone, false = appuyer sur E
+const STOCKPILE_UNLOAD_INTERVAL := 0.09 # délai entre deux rondins déchargés (s)
+const STOCKPILE_FLY_TIME := 0.32        # durée du vol d'un rondin de l'épaule à la pile (s)
+const STOCKPILE_FLY_ARC := 0.5          # hauteur de la cloche du vol (m)
+const STOCKPILE_STACK_BASE := 7         # rondins dans la rangée du bas d'un tas (pyramide : 7+6+…+1 = 28)
+const STOCKPILE_STACKS := 3             # nombre de tas visibles (au-delà, seul le compteur monte)
+
 # --- Arbres -----------------------------------------------------------------
 const TREE_MAX_HEALTH := 100.0
 const LOGS_PER_TREE := 4

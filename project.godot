@@ -18,6 +18,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 [autoload]
 
 GameConfig="*res://scripts/core/game_config.gd"
+Camp="*res://scripts/core/camp_economy.gd"
 
 [display]
 

@@ -1,8 +1,9 @@
 class_name LogCarrier
 extends Node3D
-## Ramassage des bûches (touche E) et pile portée sur l'épaule gauche.
+## Ramassage des bûches (touche E), pile portée sur l'épaule gauche et déchargement au dépôt du camp.
 ## Ramassage « ninja » : la bûche visée disparaît dans un nuage de fumée et réapparaît aussitôt
 ## sur la pile. La main gauche tient la pile tant qu'on porte du bois.
+## Dans la zone d'un `WoodStockpile`, E décharge la pile rondin par rondin (du haut vers le bas).
 
 signal prompt_changed(text: String)
 signal load_changed(count: int, capacity: int)
@@ -32,6 +33,11 @@ var _popping: Node3D
 var _pop_time := 0.0
 ## Poids de la main gauche sur la pile (monte en douceur à la première bûche).
 var _left_weight := 0.0
+## Dépôt dans la zone duquel se trouve le joueur (null hors de toute zone).
+var _stockpile: WoodStockpile
+## Déchargement en cours et temps restant avant le prochain rondin.
+var _unloading := false
+var _unload_timer := 0.0
 
 @onready var _body: FirstPersonBody = owner.get_node("Body")
 @onready var _camera: Camera3D = owner.get_node("Head/Camera3D")
@@ -48,8 +54,12 @@ func _physics_process(delta: float) -> void:
 	if _stack_root.is_inside_tree():
 		_stack_root.position = _body.get_left_shoulder_local() + STACK_OFFSET
 	_update_target()
-	if _target and Input.is_action_just_pressed("interact") and count < GameConfig.BASE_WOOD_CAPACITY:
-		pick_up(_target)
+	if Input.is_action_just_pressed("interact"):
+		if _target and count < GameConfig.BASE_WOOD_CAPACITY:
+			pick_up(_target)
+		elif _stockpile and count > 0:
+			_unloading = true
+	_update_unload(delta)
 	_update_pop(delta)
 	_hold_stack(delta)
 
@@ -64,8 +74,12 @@ func _update_target() -> void:
 	if _target and _target.is_queued_for_deletion():
 		_target = null
 	var text := ""
-	if _target:
-		text = "Charge pleine (%d/%d)" % [count, GameConfig.BASE_WOOD_CAPACITY] if count >= GameConfig.BASE_WOOD_CAPACITY else "[E] Ramasser"
+	if _target and count < GameConfig.BASE_WOOD_CAPACITY:
+		text = "[E] Ramasser"
+	elif _stockpile and count > 0:
+		text = "" if _unloading else "[E] Déposer le bois (%d)" % count
+	elif _target:
+		text = "Charge pleine (%d/%d)" % [count, GameConfig.BASE_WOOD_CAPACITY]
 	_set_prompt(text)
 
 
@@ -107,6 +121,47 @@ func _update_pop(delta: float) -> void:
 	_popping.transform = Transform3D(slot.basis.scaled(Vector3.ONE * maxf(bounce, 0.001)), slot.origin)
 	if t >= 1.0:
 		_popping = null
+
+
+# --- Dépôt au camp ----------------------------------------------------------------------------
+
+## Appelé par le dépôt quand le joueur entre dans sa zone.
+func enter_stockpile(stockpile: WoodStockpile) -> void:
+	_stockpile = stockpile
+	if GameConfig.STOCKPILE_AUTO_DEPOSIT and count > 0:
+		_unloading = true
+
+
+## Appelé par le dépôt quand le joueur sort de sa zone : le déchargement s'arrête, le reste est gardé.
+func exit_stockpile(stockpile: WoodStockpile) -> void:
+	if _stockpile == stockpile:
+		_stockpile = null
+		_unloading = false
+
+
+## Décharge la pile un rondin à la fois, celui du dessus d'abord.
+func _update_unload(delta: float) -> void:
+	if not _unloading:
+		_unload_timer = 0.0
+		return
+	_unload_timer -= delta
+	while _unload_timer <= 0.0 and count > 0:
+		_unload_timer += GameConfig.STOCKPILE_UNLOAD_INTERVAL
+		_stockpile.receive_log(_take_top_log())
+	if count == 0:
+		_unloading = false
+
+
+## Retire la bûche du dessus de la pile portée et renvoie son transform global (départ du vol).
+func _take_top_log() -> Transform3D:
+	var carried: Node3D = _stack.pop_back()
+	if carried == _popping:
+		_popping = null
+	var from := Transform3D(carried.global_basis, carried.global_position)
+	carried.queue_free()
+	count -= 1
+	load_changed.emit(count, GameConfig.BASE_WOOD_CAPACITY)
+	return from
 
 
 # --- Pile sur l'épaule -------------------------------------------------------------------------

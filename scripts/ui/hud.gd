@@ -1,16 +1,19 @@
 extends CanvasLayer
 ## HUD minimal : réticule, jauge d'endurance (masquée quand elle est pleine), invite de ramassage
-## et compteur de bûches portées.
+## compteur de bûches portées et stock de bois du camp.
 
 @onready var _stamina_bar: ProgressBar = %StaminaBar
 @onready var _prompt: Label = %PromptLabel
 @onready var _load: Label = %LoadLabel
+@onready var _camp: Label = %CampLabel
 
 
 func _ready() -> void:
 	_stamina_bar.modulate.a = 0.0
 	_prompt.text = ""
 	_load.text = ""
+	CampEconomy.instance.wood_changed.connect(_on_camp_wood_changed)
+	_on_camp_wood_changed(CampEconomy.instance.wood)
 	var player := get_tree().get_first_node_in_group("player") as Player
 	if player:
 		player.stamina_changed.connect(_on_stamina_changed)
@@ -28,3 +31,7 @@ func _on_stamina_changed(value: float, max_value: float) -> void:
 
 func _on_load_changed(count: int, capacity: int) -> void:
 	_load.text = "Bois : %d / %d" % [count, capacity] if count > 0 else ""
+
+
+func _on_camp_wood_changed(total: int) -> void:
+	_camp.text = "Camp — Bois : %d" % total

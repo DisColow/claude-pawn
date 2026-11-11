@@ -18,6 +18,7 @@ Jeu FPS « péon orc » dans un RTS, **Godot 4.7.2** (Forward+, Jolt). Cahier de
 
 - Valeurs d'équilibrage **uniquement** dans `scripts/core/game_config.gd` (constantes, commentées en français).
 - Commentaires et docstrings en français, style `##` de GDScript. Typage statique partout (les avertissements GDScript doivent rester à zéro).
+- Autoloads à état (ex. `CampEconomy`) : y accéder par `Classe.instance`, jamais par le nom de l'autoload (introuvable à la compilation des tests lancés avec `-s`).
 - Couches physiques : 1 world, 2 player, 3 trees (valeur 4), 4 logs (valeur 8).
 - Éléments de la vue subjective : passer par `ZClip.apply()`.
 - **Avant chaque commit qui touche des scènes, des assets ou `project.godot` : lancer `tools/resave_with_editor.sh`.**
@@ -47,6 +48,7 @@ Scripts dans `tests/` (en-tête de chaque fichier = usage) :
 - `tree_test.gd` — un arbre isolé frappé 4 fois.
 - `move_test.gd` — vitesses de marche/sprint, endurance, saut.
 - `pickup_test.gd` — ramassage des bûches (E) : disparition en fumée, pile 1→10, ralentissement, charge pleine.
+- `deposit_test.gd` — dépôt au camp (E dans la zone) : vol des rondins, stock global, pile qui grandit, collision.
 - `props_test.gd` — rocher bloquant, buisson traversable qui froisse.
 - `preview.gd` — aperçu de modèles/scènes.
 
