@@ -26,16 +26,9 @@ const BUSH_SHAKE_ANGLE := 0.09          # inclinaison du frémissement (rad)
 const BASE_WOOD_CAPACITY := 10
 const MAX_CARRY_SPEED_PENALTY := 0.35
 const PICKUP_RANGE := 2.3               # distance max (depuis la caméra) pour ramasser une bûche (m)
-# Ramassage : hache rangée à la ceinture, bûche saisie de la main droite et posée sur l'épaule gauche.
-const PICKUP_STOW_TIME := 0.35          # la hache est rangée à la ceinture (s)
-const PICKUP_GRAB_TIME := 0.95          # la main droite saisit la bûche (s)
-const PICKUP_PLACE_TIME := 1.5          # la bûche est posée sur la pile (s)
-const PICKUP_DRAW_TIME := 1.75          # la main droite reprend la hache (s)
-const PICKUP_DURATION := 2.05           # retour en garde, fin du ramassage (s)
-const PICKUP_CROUCH_DROP := 0.62        # descente de la caméra accroupi (m)
-const PICKUP_LOOK_BLEND := 0.65         # part du regard attirée vers la bûche pendant le ramassage
+# Ramassage « ninja » : la bûche disparaît en fumée et réapparaît sur la pile de l'épaule gauche.
+const PICKUP_POP_TIME := 0.18           # apparition (avec rebond) de la bûche sur la pile (s)
 const CARRIED_LOG_SCALE := 0.5          # taille des bûches portées sur l'épaule (lisibilité de la vue)
-const PICKUP_REACH := 0.55              # distance horizontale pieds -> bûche à laquelle l'orc s'avance (m)
 
 # --- Arbres -----------------------------------------------------------------
 const TREE_MAX_HEALTH := 100.0

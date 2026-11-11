@@ -1,0 +1,101 @@
+[gd_scene format=3 uid="uid://cg1p5snqoa5pu"]
+
+[ext_resource type="Script" uid="uid://c3hdmjc151xh7" path="res://scripts/vfx/poof_vfx.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dlp2bi7iukas5" path="res://assets/vfx/poof_puff.png" id="2_smoke"]
+[ext_resource type="AudioStream" uid="uid://dfk0ojl45wq8k" path="res://assets/sounds/pickup/poof.ogg" id="3_poof"]
+
+[sub_resource type="Gradient" id="Gradient_alpha"]
+offsets = PackedFloat32Array(0, 0.05, 0.5, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 0.97, 0.97, 0.98, 0.95, 0.9, 0.9, 0.93, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture_alpha"]
+gradient = SubResource("Gradient_alpha")
+
+[sub_resource type="Curve" id="Curve_puff"]
+_data = [Vector2(0, 0.35), 0.0, 6.0, 0, 0, Vector2(0.18, 1), 0.0, 0.0, 0, 0, Vector2(1, 1.25), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_puff"]
+curve = SubResource("Curve_puff")
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_cloud"]
+emission_shape = 3
+emission_box_extents = Vector3(0.45, 0.12, 0.12)
+angle_min = -180.0
+angle_max = 180.0
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 1.5
+initial_velocity_max = 3.0
+angular_velocity_min = -60.0
+angular_velocity_max = 60.0
+gravity = Vector3(0, 0.6, 0)
+damping_min = 6.0
+damping_max = 8.0
+scale_min = 0.7
+scale_max = 1.05
+scale_curve = SubResource("CurveTexture_puff")
+color_ramp = SubResource("GradientTexture_alpha")
+
+[sub_resource type="StandardMaterial3D" id="Mat_smoke"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_smoke")
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="Quad_smoke"]
+material = SubResource("Mat_smoke")
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_ring"]
+emission_shape = 6
+emission_ring_axis = Vector3(0, 1, 0)
+emission_ring_height = 0.05
+emission_ring_radius = 0.3
+emission_ring_inner_radius = 0.2
+emission_ring_cone_angle = 90.0
+angle_min = -180.0
+angle_max = 180.0
+radial_velocity_min = 3.0
+radial_velocity_max = 4.5
+gravity = Vector3(0, 0.3, 0)
+damping_min = 7.0
+damping_max = 9.0
+scale_min = 0.35
+scale_max = 0.55
+scale_curve = SubResource("CurveTexture_puff")
+color_ramp = SubResource("GradientTexture_alpha")
+
+[node name="PoofVFX" type="Node3D" unique_id=1462803011]
+script = ExtResource("1_script")
+
+[node name="Cloud" type="GPUParticles3D" parent="." unique_id=820440671]
+emitting = false
+amount = 22
+lifetime = 0.9
+one_shot = true
+explosiveness = 1.0
+randomness = 0.2
+visibility_aabb = AABB(-2, -1, -2, 4, 4, 4)
+process_material = SubResource("PPM_cloud")
+draw_pass_1 = SubResource("Quad_smoke")
+
+[node name="Ring" type="GPUParticles3D" parent="." unique_id=1774041670]
+emitting = false
+amount = 12
+lifetime = 0.6
+one_shot = true
+explosiveness = 1.0
+randomness = 0.2
+visibility_aabb = AABB(-2, -1, -2, 4, 3, 4)
+process_material = SubResource("PPM_ring")
+draw_pass_1 = SubResource("Quad_smoke")
+
+[node name="PoofAudio" type="AudioStreamPlayer3D" parent="." unique_id=1670238383]
+stream = ExtResource("3_poof")
+volume_db = -2.0
+max_distance = 30.0

@@ -14,3 +14,8 @@ Testés avec Blender 5.2 et Python 3 + Pillow/NumPy/soundfile.
 
 La texture `assets/textures/wood_rings.png` est générée procéduralement (Pillow).
 Les sons d'arbre (`tree_crash.ogg`, `tree_fall_thud.ogg`) sont des extraits découpés des fichiers OpenGameArt listés dans `CREDITS.md`.
+
+## Fumée du ramassage ninja
+
+- `make_poof_texture.py` : dérive `assets/vfx/poof_puff.png` (bouffée blanche opaque) de `smoke_07.png` (Kenney, CC0).
+- `make_poof_sound.py` : synthétise `assets/sounds/pickup/poof.ogg` (bruit filtré + coup sourd, numpy + ffmpeg).

@@ -5,14 +5,11 @@ extends Node3D
 ## - tête masquée côté caméra, mais présente dans l'ombre portée (squelette d'ombre dédié) ;
 ## - bras droit piloté par IK pour tenir la hache animée en espace caméra ;
 ## - bras gauche piloté par IK (dosable) pour tenir la pile de bûches sur l'épaule ;
-## - hache rangeable à la ceinture (hanche droite) pour libérer la main droite ;
-## - accroupissement dosable (animation Crouch_Idle) pour le ramassage ;
 ## - tous les éléments de la vue subjective utilisent le Z-Clip Depth Scaling.
 
 ## Points de la blend space de locomotion (vitesse au sol en m/s -> animation).
 const LOCOMOTION_POINTS := {"Idle": 0.0, "Walk": 1.8, "Jog_Fwd": 5.2, "Sprint": 8.2}
 const AIR_ANIMATION := "Jump"
-const CROUCH_ANIMATION := "Crouch_Idle"
 ## Pose de poing fermé empruntée à l'animation d'épée (main droite en permanence, main gauche
 ## quand elle tient quelque chose).
 const GRIP_ANIMATION := "Sword_Idle"
@@ -27,14 +24,7 @@ const MODEL_SCALE := 1.05
 const LOOK_DOWN_BODY_SHIFT := 0.24
 ## Recul supplémentaire à pleine vitesse (les animations de course penchent le buste en avant).
 const SPEED_BODY_SHIFT := 0.2
-## Main droite qui tient la hache rangée, dans le repère du squelette (modèle tourné vers +Z,
-## droite = -X) : bras pendant le long du corps, doigts dans l'axe de l'avant-bras (poignet droit),
-## poing à l'horizontale vers la gauche. La hache est donc glissée en travers de la ceinture, devant
-## le ventre : bout du manche à la hanche droite, tête vers la hanche gauche.
-const HOLSTER_HAND := Transform3D(Vector3(0.0, 0.29, 0.957), Vector3(0.0, -0.957, 0.29), Vector3(1.0, 0.0, 0.0), Vector3(-0.2, 0.97, 0.18))
 const AXE_IN_HAND := Transform3D(Vector3(0, -1, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0), Vector3(-0.035, 0.095, 0.08))
-## Hache rangée en travers de la ceinture (repère du squelette), déduite de la main qui la range.
-const AXE_ON_HIP := HOLSTER_HAND * AXE_IN_HAND
 
 @export var model_scene: PackedScene = preload("res://assets/models/characters/orc_worker.glb")
 @export var axe_scene: PackedScene = preload("res://assets/models/props/axe.glb")
@@ -58,12 +48,6 @@ var _left_hand_target: Node3D
 var _left_elbow_pole: Node3D
 var _shoulder_bone := -1
 var _left_shoulder_bone := -1
-## Hache (visible, ombre) et ses deux points d'attache par squelette : [main, hanche].
-var _axes: Array[Node3D] = []
-var _axe_mounts: Array[Array] = []
-var _hip_mount: Node3D
-## Avant-bras droit réel (coude -> poignet, global) après IK, relevé à chaque mise à jour du squelette.
-var _right_forearm := Vector3.FORWARD
 var _air_blend := 0.0
 var _base_position := Vector3.ZERO
 
@@ -91,7 +75,6 @@ func _ready() -> void:
 
 	_attach_axe(skeleton, false)
 	_attach_axe(shadow_skeleton, true)
-	_hip_mount = _axe_mounts[0][1]
 	# Oreilles pointues et défenses : invisibles à la caméra (tête masquée), présentes dans l'ombre.
 	for part in OrcHeadParts.attach(skeleton):
 		_set_shadow_mode(part, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
@@ -112,7 +95,6 @@ func _ready() -> void:
 	add_child(_left_elbow_pole)
 
 	_setup_modifiers(shadow_skeleton)
-	skeleton.skeleton_updated.connect(_on_skeleton_updated)
 	_setup_animation_tree()
 
 	_shoulder_bone = skeleton.find_bone("upperarm_r")
@@ -125,47 +107,8 @@ func _ready() -> void:
 
 ## Place la main droite pour que la hache soit tenue à `axe_global`. `pole_global` oriente le coude.
 func hold_axe_at(axe_global: Transform3D, pole_global: Vector3) -> void:
-	hold_right_hand_at(hand_for_axe(axe_global), pole_global)
-
-
-## Main droite (position et orientation de l'os hand_r) et coude.
-func hold_right_hand_at(hand_global: Transform3D, pole_global: Vector3) -> void:
-	_hand_target.global_transform = hand_global
+	_hand_target.global_transform = axe_global * AXE_IN_HAND.affine_inverse()
 	_elbow_pole.global_position = pole_global
-
-
-## Transform de la main droite qui tiendrait la hache à `axe_global`.
-func hand_for_axe(axe_global: Transform3D) -> Transform3D:
-	return axe_global * AXE_IN_HAND.affine_inverse()
-
-
-## Position globale de la hache rangée à la ceinture (suit la hanche animée).
-func axe_stow_global() -> Transform3D:
-	return _hip_mount.global_transform * _hip_axe_local()
-
-
-## Range la hache à la ceinture (true) ou la remet dans la main droite (false).
-func set_axe_stowed(stowed: bool) -> void:
-	for i in _axes.size():
-		var mount: Node3D = _axe_mounts[i][1 if stowed else 0]
-		_axes[i].reparent(mount, false)
-		_axes[i].transform = _hip_axe_local() if stowed else AXE_IN_HAND
-
-
-## Direction réelle de l'avant-bras droit (après IK, image précédente).
-func right_forearm_direction() -> Vector3:
-	return _right_forearm
-
-
-func _on_skeleton_updated() -> void:
-	var elbow := skeleton.get_bone_global_pose(skeleton.find_bone("lowerarm_r")).origin
-	var wrist := skeleton.get_bone_global_pose(skeleton.find_bone("hand_r")).origin
-	if elbow.distance_squared_to(wrist) > 0.0001:
-		_right_forearm = (skeleton.global_basis * (wrist - elbow)).normalized()
-
-
-func get_right_shoulder_local() -> Vector3:
-	return to_local(get_shoulder_position())
 
 
 func get_shoulder_position() -> Vector3:
@@ -185,11 +128,6 @@ func hold_left_hand_at(hand_global: Vector3, pole_global: Vector3, weight: float
 	_left_arm_ik.influence = clampf(weight, 0.0, 1.0)
 	_left_arm_ik.active = weight > 0.001
 	_anim_tree.set("parameters/grip_left/blend_amount", clampf(weight, 0.0, 1.0))
-
-
-## Accroupissement (0 = debout, 1 = accroupi au sol).
-func set_crouch(amount: float) -> void:
-	_anim_tree.set("parameters/crouch/blend_amount", clampf(amount, 0.0, 1.0))
 
 
 ## Met à jour la locomotion. `speed` = vitesse horizontale signée (négative en marche arrière).
@@ -263,17 +201,10 @@ func _setup_animation_tree() -> void:
 	var jump := AnimationNodeAnimation.new()
 	jump.animation = AIR_ANIMATION
 	root.add_node("jump", jump)
-	var crouch_pose := AnimationNodeAnimation.new()
-	crouch_pose.animation = CROUCH_ANIMATION
-	root.add_node("crouch_pose", crouch_pose)
-	var crouch := AnimationNodeBlend2.new()
-	root.add_node("crouch", crouch)
-	root.connect_node("crouch", 0, "direction")
-	root.connect_node("crouch", 1, "crouch_pose")
 
 	var air := AnimationNodeBlend2.new()
 	root.add_node("air", air)
-	root.connect_node("air", 0, "crouch")
+	root.connect_node("air", 0, "direction")
 	root.connect_node("air", 1, "jump")
 
 	var grip_pose := AnimationNodeAnimation.new()
@@ -315,13 +246,7 @@ func _attach_axe(target_skeleton: Skeleton3D, shadow_only: bool) -> void:
 	attachment.name = "AxeAttachment"
 	target_skeleton.add_child(attachment)
 	attachment.bone_name = "hand_r"
-	var hip := BoneAttachment3D.new()
-	hip.name = "AxeHipMount"
-	target_skeleton.add_child(hip)
-	hip.bone_name = "pelvis"
-	_axe_mounts.append([attachment, hip])
 	var axe: Node3D = axe_scene.instantiate()
-	_axes.append(axe)
 	axe.name = "Axe"
 	axe.transform = AXE_IN_HAND
 	attachment.add_child(axe)
@@ -330,12 +255,6 @@ func _attach_axe(target_skeleton: Skeleton3D, shadow_only: bool) -> void:
 	else:
 		_set_shadow_mode(axe, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 		ZClip.apply(axe)
-
-
-## Hache rangée exprimée dans le repère de l'os pelvis (au repos).
-func _hip_axe_local() -> Transform3D:
-	var pelvis := skeleton.get_bone_global_rest(skeleton.find_bone("pelvis"))
-	return pelvis.affine_inverse() * AXE_ON_HIP
 
 
 func _set_shadow_mode(root: Node, mode: GeometryInstance3D.ShadowCastingSetting) -> void:

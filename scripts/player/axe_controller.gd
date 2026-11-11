@@ -36,10 +36,6 @@ var _impact_angle := STRIKE_ANGLE
 var _bob_time := 0.0
 var _bob_amount := 0.0
 var _swing_queued := false
-## Main droite réquisitionnée (ramassage) : la pose de hache est calculée mais pas appliquée.
-var suspended := false
-var _hand_pose := Transform3D.IDENTITY
-var _hand_pole := Vector3.ZERO
 
 
 func is_swinging() -> bool:
@@ -126,19 +122,7 @@ func _apply_pose() -> void:
 	var axe_local := _pose_for_phase(shoulder)
 	var axe_global := camera.global_transform * axe_local
 	var pole := camera.global_transform * (shoulder + Vector3(0.45, -0.55, 0.25))
-	_hand_pose = body.hand_for_axe(axe_global)
-	_hand_pole = pole
-	if not suspended:
-		body.hold_right_hand_at(_hand_pose, pole)
-
-
-## Pose actuelle de la main droite « hache en garde » (et son coude), pour s'y raccorder en douceur.
-func hand_pose() -> Transform3D:
-	return _hand_pose
-
-
-func hand_pole() -> Vector3:
-	return _hand_pole
+	body.hold_axe_at(axe_global, pole)
 
 
 func _pose_for_phase(shoulder: Vector3) -> Transform3D:

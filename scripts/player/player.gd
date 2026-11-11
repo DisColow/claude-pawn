@@ -17,7 +17,6 @@ var _sprinting := false
 var _stamina_regen_delay := 0.0
 var _footstep_accumulator := 0.0
 var _was_on_floor := true
-var _head_height := 0.0
 
 @onready var head: Node3D = $Head
 @onready var camera: CameraShake = $Head/Camera3D
@@ -33,7 +32,6 @@ var _head_height := 0.0
 
 func _ready() -> void:
 	add_to_group("player")
-	_head_height = head.position.y
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	axe.hit_landed.connect(_on_axe_hit)
 
@@ -49,21 +47,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Inclinaison du regard choisie par le joueur (sans l'attraction vers une bûche ramassée).
-func look_pitch() -> float:
-	return _pitch
-
-
 func _physics_process(delta: float) -> void:
-	var busy := carrier.is_busy()
-	if not busy and Input.is_action_pressed("attack") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if Input.is_action_pressed("attack") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		axe.request_swing()
 
-	# Ramassage en cours : immobile, la tête descend avec l'accroupissement et suit la bûche.
-	var input := Vector2.ZERO if busy else Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	carried_logs = carrier.count
-	head.position.y = _head_height - GameConfig.PICKUP_CROUCH_DROP * carrier.crouch
-	head.rotation.x = _pitch + carrier.look_offset
+	head.rotation.x = _pitch
 	var wish := (global_basis * Vector3(input.x, 0.0, input.y))
 	wish.y = 0.0
 	wish = wish.normalized() * minf(input.length(), 1.0)
@@ -73,13 +63,11 @@ func _physics_process(delta: float) -> void:
 
 	if not is_on_floor():
 		velocity += get_gravity() * delta
-	elif not busy and Input.is_action_just_pressed("jump"):
+	elif Input.is_action_just_pressed("jump"):
 		velocity.y = GameConfig.JUMP_VELOCITY
 
 	var acceleration := GameConfig.GROUND_ACCELERATION if is_on_floor() else GameConfig.AIR_ACCELERATION
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z).move_toward(wish * target_speed, acceleration * target_speed * delta)
-	if busy:
-		horizontal = carrier.step_velocity  # pas vers la bûche pendant le ramassage
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 	move_and_slide()
@@ -115,8 +103,7 @@ func _update_body(delta: float) -> void:
 	var local_velocity := global_basis.inverse() * velocity
 	var horizontal_speed := Vector2(local_velocity.x, local_velocity.z).length()
 	var signed_speed := horizontal_speed * (-1.0 if local_velocity.z > 0.5 else 1.0)
-	body.look_pitch = _pitch + carrier.look_offset
-	body.set_crouch(carrier.crouch)
+	body.look_pitch = _pitch
 	body.update_locomotion(signed_speed, is_on_floor(), delta)
 	axe.set_walk_bob(clampf(horizontal_speed / GameConfig.SPRINT_SPEED, 0.0, 1.0) if is_on_floor() else 0.0)
 
