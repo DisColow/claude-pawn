@@ -85,4 +85,4 @@
 | 2026-11-11 | `572fac3` | Dépôt au camp (§3.3) : zone de stockage, E pour décharger, rondins qui volent jusqu'à la pile, stock global, HUD, test `deposit_test` |
 | 2026-11-11 | `8ce15bc` | Son de ramassage refait : notes douces qui montent la gamme avec la pile (le « poof » est retiré) |
 | 2026-11-11 | `3fc2410` | Son de ramassage : choc de bois (bûche contre bûche) à la place des notes de marimba |
-| 2026-11-11 | `HASH` | Scierie : le dépôt devient un bâtiment à points de vie, constructible et destructible (`CampBuilding`, `LumberMill`), test `building_test` |
+| 2026-11-11 | `6d4fe0d` | Scierie : le dépôt devient un bâtiment à points de vie, constructible et destructible (`CampBuilding`, `LumberMill`), test `building_test` |
