@@ -47,6 +47,7 @@ Scripts dans `tests/` (en-tête de chaque fichier = usage) :
 - `tree_test.gd` — un arbre isolé frappé 4 fois.
 - `move_test.gd` — vitesses de marche/sprint, endurance, saut.
 - `pickup_test.gd` — ramassage des bûches (E) : séquence animée, pile 1→10, ralentissement, charge pleine.
+- `wrist_test.gd` — angle du poignet droit pendant le ramassage (doit rester ≤ ~60°).
 - `props_test.gd` — rocher bloquant, buisson traversable qui froisse.
 - `preview.gd` — aperçu de modèles/scènes.
 

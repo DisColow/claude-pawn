@@ -21,12 +21,21 @@ const HOLD_OFFSET := Vector3(-0.24, -0.05, -0.1)
 ## Coudes : vers l'extérieur et le bas (repère du corps, à partir de chaque épaule).
 const ELBOW_POLE_OFFSET := Vector3(-0.45, -0.45, 0.15)
 const RIGHT_ELBOW_POLE_OFFSET := Vector3(0.45, -0.5, 0.2)
+## Coude droit quand la main tient la hache à la ceinture : en arrière, comme pour saisir un manche à la hanche.
+const RIGHT_ELBOW_HOLSTER_OFFSET := Vector3(0.3, -0.35, 0.6)
 ## Point de passage de la bûche entre le sol et l'épaule gauche : devant le bas du torse
 ## (repère du corps, à partir de l'épaule gauche).
 const LIFT_WAYPOINT := Vector3(0.22, -0.4, -0.38)
-## Bûche tenue dans le poing droit (repère de l'os hand_r) : son axe suit l'axe du poing (+Z),
-## elle est sous la paume (-X), au centre du poing calibré pour la hache.
+## Centre du poing droit dans le repère de l'os hand_r (calibré pour la hache) ; paume côté -X,
+## doigts vers +Y, axe du poing +Z.
 const GRIP_CENTER := Vector3(-0.035, 0.095, 0.0)
+## Où la main droite dépose la bûche : bord intérieur du haut de la pile, près du cou (repère de la
+## pile). La bûche glisse ensuite à sa place : la main n'a pas à traverser toute l'épaule.
+const PLACE_POINT := Vector3(0.12, 0.14, -0.1)
+## Main posée sur une bûche : doigts légèrement fléchis, rotation du poing autour de l'avant-bras
+## limitée à l'amplitude d'un vrai bras (pronation/supination).
+const WRIST_TILT := deg_to_rad(25.0)
+const FOREARM_MAX_TWIST := deg_to_rad(60.0)
 
 ## Nombre de bûches portées.
 var count := 0
@@ -43,6 +52,9 @@ var _picked: WoodLog
 var _log_center := Vector3.ZERO
 var _log_axis := Vector3.RIGHT
 var _grab_hand := Transform3D.IDENTITY
+var _place_hand := Transform3D.IDENTITY
+## Bûche dans le repère de la main au moment de la saisie.
+var _log_in_grip := Transform3D.IDENTITY
 var _axe_stowed := false
 var _placed := false
 var _count_before := 0
@@ -147,17 +159,21 @@ func _update_pickup(delta: float) -> void:
 
 	var guard := _axe.hand_pose()
 	var holster := _body.hand_for_axe(_body.axe_stow_global())
-	var pole := _body.to_global(_body.get_right_shoulder_local() + RIGHT_ELBOW_POLE_OFFSET)
+	var reach_pole := _body.to_global(_body.get_right_shoulder_local() + RIGHT_ELBOW_POLE_OFFSET)
+	var holster_pole := _body.to_global(_body.get_right_shoulder_local() + RIGHT_ELBOW_HOLSTER_OFFSET)
+	var pole := reach_pole
 	var hand: Transform3D
 
 	if _time < stow:
 		# 1. La main droite range la hache à la ceinture.
 		hand = guard.interpolate_with(holster, _ease(_time / stow))
+		pole = _axe.hand_pole().lerp(holster_pole, _ease(_time / stow))
 	elif _time < grab:
 		_set_axe_stowed(true)
-		# 2. Main droite vers la bûche, prise par-dessus.
-		_grab_hand = _hand_on_log(_log_center, _log_axis, 1.0)
+		# 2. Main droite vers la bûche, posée dessus, poignet dans l'axe de l'avant-bras.
+		_grab_hand = _natural_hand(_log_center + Vector3.UP * (LOG_RADIUS + 0.02), _log_axis)
 		hand = holster.interpolate_with(_grab_hand, _ease((_time - stow) / (grab - stow)))
+		pole = holster_pole.lerp(reach_pole, _ease((_time - stow) / (grab - stow)))
 	elif _time < place:
 		if _picked:
 			_take_log()
@@ -166,46 +182,65 @@ func _update_pickup(delta: float) -> void:
 		var u := _ease((_time - grab) / (place - grab))
 		var log_scale := lerpf(1.0, GameConfig.CARRIED_LOG_SCALE, u)
 		var slot := _stack_root.global_transform * _slot_transform(count)
-		var place_hand := slot * _log_in_hand(GameConfig.CARRIED_LOG_SCALE).affine_inverse()
+		var carried_radius := LOG_RADIUS * GameConfig.CARRIED_LOG_SCALE
+		_place_hand = _natural_hand(_stack_root.to_global(PLACE_POINT) + Vector3.UP * (carried_radius + 0.02), slot.basis.x.normalized())
 		var waypoint := _body.to_global(_body.get_left_shoulder_local() + LIFT_WAYPOINT)
-		var origin := _grab_hand.origin.lerp(waypoint, u).lerp(waypoint.lerp(place_hand.origin, u), u)
-		hand = Transform3D(_grab_hand.basis.orthonormalized().slerp(place_hand.basis.orthonormalized(), u), origin)
-		# La bûche suit le poing ; en fin de course elle se cale dans son emplacement.
-		var held := hand * _log_in_hand(log_scale)
-		_in_hand.global_transform = held.interpolate_with(slot, smoothstep(0.7, 1.0, u))
+		var origin := _grab_hand.origin.lerp(waypoint, u).lerp(waypoint.lerp(_place_hand.origin, u), u)
+		hand = _hand_along_path(origin, _place_hand, u)
+		# La bûche suit la main (c'est elle qui tourne, pas le poignet) et se range peu à peu
+		# dans son emplacement de la pile.
+		var held := hand * _log_in_grip
+		held.basis = held.basis.orthonormalized().scaled(Vector3.ONE * log_scale)
+		_in_hand.global_transform = held.interpolate_with(slot, smoothstep(0.25, 1.0, u))
 	else:
 		if not _placed:
 			_place_log()
 		if _time < draw:
 			# 4. La main droite redescend à la ceinture reprendre la hache…
-			var slot_hand := _stack_root.global_transform * _slot_transform(count - 1) * _log_in_hand(GameConfig.CARRIED_LOG_SCALE).affine_inverse()
-			hand = slot_hand.interpolate_with(holster, _ease((_time - place) / (draw - place)))
+			var r := _ease((_time - place) / (draw - place))
+			hand = _hand_along_path(_place_hand.origin.lerp(holster.origin, r), holster, r)
+			pole = reach_pole.lerp(holster_pole, _ease((_time - place) / (draw - place)))
 		else:
 			_set_axe_stowed(false)
 			# 5. … et revient en garde.
 			hand = holster.interpolate_with(guard, _ease((_time - draw) / (duration - draw)))
+			pole = holster_pole.lerp(_axe.hand_pole(), _ease((_time - draw) / (duration - draw)))
 
 	_body.hold_right_hand_at(hand, pole)
 	if _time >= duration:
 		_finish_pickup()
 
 
-## Main droite qui empoigne la bûche par-dessus : axe du poing le long de la bûche (pouce vers la
-## gauche du joueur), paume vers le bas.
-func _hand_on_log(center: Vector3, axis: Vector3, log_scale: float) -> Transform3D:
-	var player_left := -_player.global_basis.x
-	var z := axis if axis.dot(player_left) >= 0.0 else -axis
-	var x := Vector3.UP
-	var y := z.cross(x).normalized()
-	var grip := Basis(x, y, z)
-	var held := _log_in_hand(log_scale)
-	return Transform3D(grip, center - grip * held.origin)
+## Main droite posée sur une bûche au point `top`, sans torsion impossible du poignet : doigts dans
+## l'axe du bras (épaule -> main, en 3D), un peu fléchis. Le poing pivote vers l'axe de la bûche
+## `log_axis` par rotation de l'avant-bras (pronation/supination), dans les limites d'un vrai bras.
+func _natural_hand(top: Vector3, log_axis: Vector3, forearm_hint := Vector3.ZERO) -> Transform3D:
+	var forearm := forearm_hint if forearm_hint != Vector3.ZERO else top - _body.get_shoulder_position()
+	forearm = forearm.normalized() if forearm.length_squared() > 0.0001 else -_player.global_basis.z
+	# Poing « neutre » : perpendiculaire au bras, le plus horizontal possible (paume vers le bas).
+	var fist := Vector3.UP.cross(forearm)
+	if fist.length_squared() < 0.01:
+		fist = -_player.global_basis.x.cross(forearm)
+	fist = fist.normalized()
+	var across := log_axis - forearm * log_axis.dot(forearm)
+	if across.length() > 0.2:
+		across = across.normalized()
+		if across.dot(fist) < 0.0:
+			across = -across
+		var twist := clampf(fist.signed_angle_to(across, forearm), -FOREARM_MAX_TWIST, FOREARM_MAX_TWIST)
+		fist = fist.rotated(forearm, twist)
+	var grip := Basis(forearm.cross(fist).normalized(), forearm, fist)
+	grip = Basis(fist, WRIST_TILT) * grip
+	return Transform3D(grip, top - grip * GRIP_CENTER)
 
 
-## Bûche tenue dans le poing droit, à l'échelle `log_scale` (1 = taille au sol).
-func _log_in_hand(log_scale: float) -> Transform3D:
-	var along_fist := Basis(Vector3(0, 0, 1), Vector3(0, 1, 0), Vector3(-1, 0, 0))
-	return Transform3D(along_fist.scaled(Vector3.ONE * log_scale), GRIP_CENTER + Vector3(-LOG_RADIUS * log_scale * 0.9, 0.0, 0.0))
+## Main en chemin vers la pose `goal` : orientation naturelle recalculée au point `at` à partir de
+## l'avant-bras réel (poing tourné comme dans `goal`), fondue dans `goal` seulement en fin de trajet.
+func _hand_along_path(at: Vector3, goal: Transform3D, progress: float) -> Transform3D:
+	var natural := _natural_hand(at, goal.basis.z.normalized(), _body.right_forearm_direction())
+	natural.origin = at
+	var blend := smoothstep(0.6, 1.0, progress)
+	return Transform3D(natural.basis.orthonormalized().slerp(goal.basis.orthonormalized(), blend), at)
 
 
 func _set_axe_stowed(stowed: bool) -> void:
@@ -216,6 +251,7 @@ func _set_axe_stowed(stowed: bool) -> void:
 
 ## Saisie : la bûche physique disparaît, sa copie portée suit la main.
 func _take_log() -> void:
+	_log_in_grip = _grab_hand.affine_inverse() * _picked.global_transform
 	_picked.queue_free()
 	_picked = null
 	_in_hand = _make_log_visual()

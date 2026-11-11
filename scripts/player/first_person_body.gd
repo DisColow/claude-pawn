@@ -27,10 +27,14 @@ const MODEL_SCALE := 1.05
 const LOOK_DOWN_BODY_SHIFT := 0.24
 ## Recul supplémentaire à pleine vitesse (les animations de course penchent le buste en avant).
 const SPEED_BODY_SHIFT := 0.2
-## Hache rangée à la ceinture, dans le repère du squelette (modèle tourné vers +Z, droite = -X) :
-## tête en haut contre la hanche droite, manche le long de la cuisse, tranchant vers l'arrière.
-const AXE_ON_HIP := Transform3D(Vector3(0.0, -0.12, 0.99), Vector3(0.06, 0.99, 0.12), Vector3(-1.0, 0.06, 0.0), Vector3(-0.21, 0.5, 0.06))
+## Main droite qui tient la hache rangée, dans le repère du squelette (modèle tourné vers +Z,
+## droite = -X) : bras pendant le long du corps, doigts dans l'axe de l'avant-bras (poignet droit),
+## poing à l'horizontale vers la gauche. La hache est donc glissée en travers de la ceinture, devant
+## le ventre : bout du manche à la hanche droite, tête vers la hanche gauche.
+const HOLSTER_HAND := Transform3D(Vector3(0.0, 0.29, 0.957), Vector3(0.0, -0.957, 0.29), Vector3(1.0, 0.0, 0.0), Vector3(-0.2, 0.97, 0.18))
 const AXE_IN_HAND := Transform3D(Vector3(0, -1, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0), Vector3(-0.035, 0.095, 0.08))
+## Hache rangée en travers de la ceinture (repère du squelette), déduite de la main qui la range.
+const AXE_ON_HIP := HOLSTER_HAND * AXE_IN_HAND
 
 @export var model_scene: PackedScene = preload("res://assets/models/characters/orc_worker.glb")
 @export var axe_scene: PackedScene = preload("res://assets/models/props/axe.glb")
@@ -58,6 +62,8 @@ var _left_shoulder_bone := -1
 var _axes: Array[Node3D] = []
 var _axe_mounts: Array[Array] = []
 var _hip_mount: Node3D
+## Avant-bras droit réel (coude -> poignet, global) après IK, relevé à chaque mise à jour du squelette.
+var _right_forearm := Vector3.FORWARD
 var _air_blend := 0.0
 var _base_position := Vector3.ZERO
 
@@ -106,6 +112,7 @@ func _ready() -> void:
 	add_child(_left_elbow_pole)
 
 	_setup_modifiers(shadow_skeleton)
+	skeleton.skeleton_updated.connect(_on_skeleton_updated)
 	_setup_animation_tree()
 
 	_shoulder_bone = skeleton.find_bone("upperarm_r")
@@ -143,6 +150,18 @@ func set_axe_stowed(stowed: bool) -> void:
 		var mount: Node3D = _axe_mounts[i][1 if stowed else 0]
 		_axes[i].reparent(mount, false)
 		_axes[i].transform = _hip_axe_local() if stowed else AXE_IN_HAND
+
+
+## Direction réelle de l'avant-bras droit (après IK, image précédente).
+func right_forearm_direction() -> Vector3:
+	return _right_forearm
+
+
+func _on_skeleton_updated() -> void:
+	var elbow := skeleton.get_bone_global_pose(skeleton.find_bone("lowerarm_r")).origin
+	var wrist := skeleton.get_bone_global_pose(skeleton.find_bone("hand_r")).origin
+	if elbow.distance_squared_to(wrist) > 0.0001:
+		_right_forearm = (skeleton.global_basis * (wrist - elbow)).normalized()
 
 
 func get_right_shoulder_local() -> Vector3:

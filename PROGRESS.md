@@ -1,7 +1,7 @@
 # PAWN — Suivi de progression
 
 > Fichier de reprise : l'état du projet, les décisions prises et la suite. Cahier des charges : `docs/SPECIFICATIONS.md`.
-> **À tenir à jour à chaque étape terminée** (voir `CLAUDE.md`). Dernière mise à jour : 2026-11-08.
+> **À tenir à jour à chaque étape terminée** (voir `CLAUDE.md`). Dernière mise à jour : 2026-11-11.
 
 ## Où on en est
 
@@ -36,6 +36,7 @@
 - Rochers solides, buissons traversables avec bruit ; **arbres (sapins KayKit) gardés tels quels** ; ramassage des bûches **avec E** et animation en body awareness ; orc avec crocs et oreilles pointues (2026-11-07).
 - **Forêt dense façon Warcraft 3** (référence : captures de WC3 Reforged fournies le 2026-11-07) : la scène de test se régénère avec le script, ne pas l'éditer à la main.
 - **Ramassage de la main droite** (2026-11-08) : la main gauche, qui tient la pile sur l'épaule, ne doit jamais la lâcher (sinon les bûches tomberaient) ; l'orc range donc sa hache à la ceinture pour ramasser.
+- **Poignet réaliste** (2026-11-11, l'utilisateur avait vu un angle impossible) : hache glissée **à l'horizontale en travers de la ceinture** (manche à la hanche droite) ; l'orientation de la main droite pendant le ramassage est calculée à partir de l'avant-bras réel (poing tourné vers la bûche, torsion limitée à 60°). Contrôle automatique : `tests/wrist_test.gd` (angle avant-bras/main ≤ ~60° dans toutes les phases).
 - **Après l'explosion, la souche n'a plus de collision** (demandé le 2026-11-07).
 - **Tous les arbres sont coupables** (plus d'arbres de décor), demandé le 2026-11-07.
 - Les arbres sont découpés hors-ligne (Blender) en souche + tronc ; les normales d'origine sont conservées (sinon anneau/traînées visibles à la jonction).
@@ -69,3 +70,4 @@
 | 2026-11-07 | `c7de86d` | Rochers solides, buissons qui froissent, orc avec oreilles pointues et défenses, soleil corrigé |
 | 2026-11-07 | `0f0b5da` | Ramassage des bûches (E) avec animation en body awareness, pile sur l'épaule gauche (§3.2) |
 | 2026-11-08 | `656bf58` | Ramassage de la main droite : hache rangée à la ceinture, main gauche qui ne lâche jamais la pile |
+| 2026-11-11 | (ce commit) | Poignet corrigé pendant le ramassage (max 58° au lieu de ~100°), hache en travers de la ceinture, test `wrist_test` |
