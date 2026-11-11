@@ -71,4 +71,4 @@
 | 2026-11-07 | `0f0b5da` | Ramassage des bûches (E) avec animation en body awareness, pile sur l'épaule gauche (§3.2) |
 | 2026-11-08 | `656bf58` | Ramassage de la main droite : hache rangée à la ceinture, main gauche qui ne lâche jamais la pile |
 | 2026-11-11 | `4dbd985` | Poignet corrigé pendant le ramassage (max 58° au lieu de ~100°), hache en travers de la ceinture, test `wrist_test` |
-| 2026-11-11 | (ce commit) | Ramassage « ninja » : la bûche disparaît en fumée et apparaît sur la pile (animation de ramassage retirée) |
+| 2026-11-11 | `e38bee7` | Ramassage « ninja » : la bûche disparaît en fumée et apparaît sur la pile (animation de ramassage retirée) |
