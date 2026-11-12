@@ -1,6 +1,6 @@
 # PAWN — Instructions pour Claude
 
-Jeu FPS « péon orc » dans un RTS, **Godot 4.7.2** (Forward+, Jolt). Cahier des charges : `docs/SPECIFICATIONS.md` (rédigé par l'utilisateur ; il prime, sauf décision contraire notée dans `PROGRESS.md`).
+Jeu FPS « péon orc » dans un RTS, **Godot 4.7.2** (Forward+, Jolt). Cahier des charges complet : **`docs/PAWN_Specification_1.pdf`** (38 pages, en anglais, fourni par l'utilisateur le 2026-11-12 : c'est la référence, il faut le suivre). `docs/SPECIFICATIONS.md` est l'ancien extrait sur la coupe de bois, avec des amendements de l'utilisateur. Les écarts décidés par l'utilisateur sont notés dans `PROGRESS.md`.
 
 ## À faire à chaque session
 

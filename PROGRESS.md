@@ -1,13 +1,13 @@
 # PAWN — Suivi de progression
 
-> Fichier de reprise : l'état du projet, les décisions prises et la suite. Cahier des charges : `docs/SPECIFICATIONS.md`.
+> Fichier de reprise : l'état du projet, les décisions prises et la suite. Cahier des charges : `docs/PAWN_Specification_1.pdf` (référence), `docs/SPECIFICATIONS.md` (ancien extrait bois, amendé).
 > **À tenir à jour à chaque étape terminée** (voir `CLAUDE.md`). Dernière mise à jour : 2026-11-11.
 
 ## Où on en est
 
 - **Branche de travail** : `feature/decoupe-bois` (seule branche du dépôt `DisColow/claude-pawn` ; `main` n'existe pas encore — décision en attente, voir plus bas).
 - **Fait** : le MVP du cahier des charges (§3.1 à §3.3) puis, sur demande « développe tout le jeu » (2026-11-11), **une boucle de jeu complète** déduite de la vision §1 : or, bastion, Général, construction par le péon, squelettes, grunts, tours, victoire / défaite. **Rien de cette boucle n'a encore été joué par l'utilisateur** : équilibrage et sensations à valider.
-- **Prochaine étape** : retours de l'utilisateur (équilibrage, lisibilité, sons), puis ce qu'il choisira parmi les pistes en fin de « Questions ouvertes ».
+- **2026-11-12 : l'utilisateur a fourni le cahier des charges complet** (`docs/PAWN_Specification_1.pdf`) et demande de le suivre. La boucle de jeu inventée la veille s'en écarte sur de nombreux points (voir « Écarts avec le PDF »). **Prochaine étape** : attendre sa réponse sur l'ordre de réalignement, ne rien modifier avant.
 
 ## Fait
 
@@ -56,6 +56,26 @@
 3. Pistes non faites : pioche et animation de minage, sac d'or visible, sons dédiés (combat, tour, squelettes), menu / pause, sauvegarde, minimap, améliorations (capacité de portage, hache), autres ennemis, export Windows.
 4. Créer `main` à partir de la branche actuelle et travailler ensuite par branches de fonctionnalité + PR ?
 
+## Écarts avec le PDF (relevés le 2026-11-12, avant tout réalignement)
+
+Contredit le PDF :
+- Ennemis = vagues de squelettes ; le PDF veut un **camp ennemi avec son propre Général**, victoire = détruire son hôtel de ville (§10.8), pas de vagues.
+- Bâtiments : bastion / scierie / tour / caserne ; le PDF nomme War Lodge → Stronghold → Fortress, Burrow, Barracks, Forge, Hunt Lodge, Beast Pen, Spirit Hut, Ancestor Shrine, Watch Tower, Stockpile, Sky Roost, Workshop (§10.2). La scierie n'existe pas ; la tour de guet est de palier 2.
+- Unités : grunt unique ; le PDF veut Bruiser, Skirmisher, Outrider, Juggernaut, Stormcaller, Bloodspeaker, Sky Raider, Saboteur, Demolisher, 4 héros, triangle mêlée > distance > volant (§10.3-10.5).
+- Or : E maintenu devant la mine ; le PDF veut **entrer dans la mine** et frapper des veines à la pioche, 1 or par coup, sac à dos visible (§5.1).
+- Portage : bois et or ensemble ; le PDF les veut **exclusifs** (§4.4).
+- Mort : réapparition gratuite après 6 s, charge perdue ; le PDF veut un nouveau péon entraîné par le Général (coût + délai), charge lâchée au sol et récupérable, talents remis à zéro (§4.5).
+- Le Général ne fait qu'un plan fixe et n'est jamais désobéi ; le PDF veut des ordres facultatifs, loyauté (traître à 0), confiance, erreurs volontaires (§6).
+- Moteur : le PDF dit Unity / C# ; le projet est en Godot (décision antérieure de l'utilisateur).
+
+Contredit le PDF **par décision antérieure de l'utilisateur** (à lui de dire lequel prime) :
+- Arbre : le PDF veut une chute physique (§5.2, §12.2, critère §20.1) ; l'utilisateur a choisi l'explosion en rondins.
+- Bois : le PDF le veut dans les deux bras, vue en partie masquée, outils rangés pendant le portage (§4.4, fig. 5.2) ; l'amendement de `SPECIFICATIONS.md` dit épaule gauche, vue dégagée, hache toujours active.
+
+Absent : roue de communication et influence (§7), XP / 30 niveaux / 3 arbres de talents (§8), Renom et améliorations permanentes sauvegardées (§9), nourriture et plafond d'unités (§5.3), appel aux armes (§10.6), mines à coloniser (§10.7), minimap et panneau d'ordres (§4.7), roulade (§4.3), ramassage d'armes et magie (§4.6), ragdolls (§12.3), musique (§13.2), manette et touches reconfigurables (§14), modes Campagne et Partie libre avec menu (§2), sauvegarde locale (§16.5).
+
+Conforme : vue subjective avec corps visible, marche / sprint / saut / endurance, coupe avec éclats, oscillation, secousse et hit-stop, capacité 10, ralentissement en charge, dépôt qui crédite l'économie du Général, valeurs centralisées (`GameConfig`).
+
 ## Problèmes connus / dette
 
 - Le son n'a jamais été écouté (pas de carte son dans l'environnement cloud) → à valider par l'utilisateur.
@@ -91,3 +111,4 @@
 | 2026-11-11 | `3fc2410` | Son de ramassage : choc de bois (bûche contre bûche) à la place des notes de marimba |
 | 2026-11-11 | `6d4fe0d` | Scierie : le dépôt devient un bâtiment à points de vie, constructible et destructible (`CampBuilding`, `LumberMill`), test `building_test` |
 | 2026-11-11 | `4303cbb` | Boucle de jeu complète : or, bastion, Général, construction par le péon, squelettes, grunts, tours, vie du joueur, victoire / défaite, test `game_test` |
+| 2026-11-12 | `HASH` | Ajout du cahier des charges complet (`docs/PAWN_Specification_1.pdf`) et relevé des écarts |
