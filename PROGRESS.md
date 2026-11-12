@@ -119,4 +119,4 @@ Non vérifiable ici : 60 images/s sur PC (§20.5), tout ce qui est sonore, la ma
 | 2026-11-11 | `4303cbb` | Boucle de jeu complète : or, bastion, Général, construction par le péon, squelettes, grunts, tours, vie du joueur, victoire / défaite, test `game_test` |
 | 2026-11-12 | `8771da5` | Ajout du cahier des charges complet (`docs/PAWN_Specification_1.pdf`) et relevé des écarts |
 | 2026-11-12 | `b7cba73` | Tranche 1 du réalignement : mine dans laquelle on entre, veines à la pioche, sac à dos, bois et or exclusifs, charge lâchée à la mort, test `mine_test` |
-| 2026-11-12 | `HASH` | Réalignement complet sur le PDF : deux camps et leurs Généraux, 12 bâtiments, 14 unités, ordres / loyauté / confiance, roue d'influence, talents, Renom sauvegardé, menu et campagne, minimap ; chantier fantôme, marteau, dépôt direct, mine refaite |
+| 2026-11-12 | `a41beb2` | Réalignement complet sur le PDF : deux camps et leurs Généraux, 12 bâtiments, 14 unités, ordres / loyauté / confiance, roue d'influence, talents, Renom sauvegardé, menu et campagne, minimap ; chantier fantôme, marteau, dépôt direct, mine refaite |
