@@ -111,4 +111,4 @@ Conforme : vue subjective avec corps visible, marche / sprint / saut / endurance
 | 2026-11-11 | `3fc2410` | Son de ramassage : choc de bois (bûche contre bûche) à la place des notes de marimba |
 | 2026-11-11 | `6d4fe0d` | Scierie : le dépôt devient un bâtiment à points de vie, constructible et destructible (`CampBuilding`, `LumberMill`), test `building_test` |
 | 2026-11-11 | `4303cbb` | Boucle de jeu complète : or, bastion, Général, construction par le péon, squelettes, grunts, tours, vie du joueur, victoire / défaite, test `game_test` |
-| 2026-11-12 | `HASH` | Ajout du cahier des charges complet (`docs/PAWN_Specification_1.pdf`) et relevé des écarts |
+| 2026-11-12 | `8771da5` | Ajout du cahier des charges complet (`docs/PAWN_Specification_1.pdf`) et relevé des écarts |
