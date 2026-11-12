@@ -43,8 +43,11 @@ const STOCKPILE_STACK_BASE := 7         # rondins dans la rangée du bas d'un ta
 const STOCKPILE_STACKS := 3             # nombre de tas visibles (au-delà, seul le compteur monte)
 
 # --- Or ------------------------------------------------------------------------
-const GOLD_PER_TRIP := 10               # or rapporté par sac
-const MINING_TIME := 2.5                # temps passé à miner pour remplir un sac (s, en maintenant E)
+const BASE_GOLD_CAPACITY := 10          # or que contient le sac à dos
+const GOLD_PER_SWING := 1               # or tiré d'une veine par coup de pioche
+const MAX_GOLD_CARRY_SPEED_PENALTY := 0.15  # ralentissement à sac plein
+const VEIN_GOLD := 40                   # or d'une veine pleine
+const VEIN_REGEN_INTERVAL := 6.0        # secondes pour qu'une veine entamée regagne 1 or
 
 # --- Bâtiments du camp --------------------------------------------------------
 # name : nom affiché ; health : points de vie ; build_time : secondes de travail du péon ;

@@ -14,14 +14,14 @@ Des vagues de squelettes arrivent par la route du nord. **Victoire** si le camp 
 | Élément | Rôle |
 |---|---|
 | Bastion | Cœur du camp. On dépose le bois et l'or dans sa cour. S'il est détruit, c'est perdu. |
-| Mine d'or (à l'est) | Maintenir E pour remplir un sac de 10 or, à rapporter au bastion. |
+| Mine d'or (à l'est) | On y entre : le péon sort sa pioche et frappe les veines d'or des parois (1 or par coup, 10 dans le sac à dos), puis rapporte l'or au bastion. |
 | Scierie | Premier bâtiment du plan ; second dépôt de bois. |
 | Tours de guet | Tirent sur les squelettes à portée. |
 | Caserne | Le Général y lève des grunts (25 or chacun, 6 au plus) qui défendent le camp. |
 
 Le Général paie chaque bâtiment avec le stock du camp et pose le chantier ; le péon le construit en
 maintenant E à côté. Un bâtiment détruit est recommandé par le Général (il faut le repayer et le rebâtir).
-Le péon a 100 points de vie, se bat à la hache, et réapparaît au camp 6 secondes après sa mort en perdant sa charge.
+Le péon porte du bois ou de l'or, jamais les deux. Il a 100 points de vie, se bat à la hache, et réapparaît au camp 6 secondes après sa mort ; sa charge tombe au sol, où il peut la reprendre.
 
 ## Lancer
 
@@ -36,7 +36,8 @@ Le péon a 100 points de vie, se bat à la hache, et réapparaît au camp 6 seco
 | Coup de hache | Clic gauche (maintenir = coups enchaînés) |
 | Ramasser une bûche (en la visant) | E |
 | Déposer le bois (dans la zone du dépôt) | E |
-| Miner l'or / construire un chantier | E (maintenir) |
+| Miner l'or (dans la mine, sur une veine) | Clic gauche |
+| Construire un chantier | E (maintenir) |
 | Rejouer (écran de fin) | R |
 | *Test* : -300 PV au bâtiment le plus proche / lancer la vague suivante | K / N |
 | Libérer / recapturer la souris | Échap / clic |

@@ -124,7 +124,7 @@ func get_target_radius() -> float:
 func _die() -> void:
 	_dead = true
 	_respawn_timer = GameConfig.PLAYER_RESPAWN_TIME
-	carrier.drop_all()
+	carrier.drop_on_ground()
 	died.emit()
 
 
@@ -153,10 +153,12 @@ func get_respawn_time() -> float:
 	return maxf(_respawn_timer, 0.0) if _dead else 0.0
 
 
-## Pénalité de vitesse proportionnelle à la charge : jusqu'à -35 % à pleine capacité.
+## Pénalité de vitesse proportionnelle à la charge : jusqu'à -35 % à pleine capacité de bois,
+## -15 % à sac d'or plein (on ne porte jamais les deux à la fois).
 func get_carry_speed_multiplier() -> float:
 	var load_ratio := clampf(float(carried_logs) / GameConfig.BASE_WOOD_CAPACITY, 0.0, 1.0)
-	return 1.0 - GameConfig.MAX_CARRY_SPEED_PENALTY * load_ratio
+	var gold_ratio := clampf(float(carrier.gold) / GameConfig.BASE_GOLD_CAPACITY, 0.0, 1.0)
+	return 1.0 - GameConfig.MAX_CARRY_SPEED_PENALTY * load_ratio - GameConfig.MAX_GOLD_CARRY_SPEED_PENALTY * gold_ratio
 
 
 func _update_stamina(delta: float, input: Vector2) -> void:
@@ -212,7 +214,9 @@ func _play_footstep(volume: float) -> void:
 	_footsteps.play()
 
 
-func _on_axe_hit(_collider: Object, _position: Vector3) -> void:
+func _on_axe_hit(collider: Object, _position: Vector3) -> void:
+	if collider is GoldVein:
+		carrier.mine_vein(collider as GoldVein)
 	camera.add_trauma(GameConfig.SHAKE_AXE_HIT)
 	if chop_sound:
 		_axe_audio.stream = chop_sound

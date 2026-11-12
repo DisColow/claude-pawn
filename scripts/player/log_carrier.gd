@@ -4,8 +4,10 @@ extends Node3D
 ## Ramassage « ninja » : la bûche visée disparaît dans un nuage de fumée et réapparaît aussitôt
 ## sur la pile, avec le « clac » d'une bûche qui en cogne une autre. La main gauche tient la pile tant qu'on porte du bois.
 ## Dans la zone d'un `WoodStockpile`, E décharge la pile rondin par rondin (du haut vers le bas).
-## Ce nœud gère aussi les autres actions du péon avec E : miner l'or (maintenir E dans une mine,
-## le sac se dépose au bastion) et construire (maintenir E près d'un chantier du Général).
+## Ce nœud gère aussi l'or (tiré des veines à la pioche, porté dans le sac à dos, déposé au bastion)
+## et la construction (maintenir E près d'un chantier du Général).
+## Règles du cahier des charges (§4.4, §4.5) : on porte du bois OU de l'or, jamais les deux ;
+## à la mort, la charge tombe au sol et peut être ramassée.
 
 signal prompt_changed(text: String)
 signal load_changed(count: int, capacity: int)
@@ -14,6 +16,7 @@ signal gold_changed(amount: int)
 signal progress_changed(ratio: float)
 
 const LOG_MODEL := preload("res://assets/models/props/wood_log.glb")
+const LOG_SCENE := preload("res://scenes/props/wood_log.tscn")
 const POOF_SCENE := preload("res://scenes/vfx/poof_vfx.tscn")
 ## Chocs de bois enregistrés (Kenney, CC0) : joués plus aigus, ils donnent le « clac » d'une bûche
 ## posée sur une autre.
@@ -35,10 +38,11 @@ const ELBOW_POLE_OFFSET := Vector3(-0.45, -0.45, 0.15)
 
 ## Nombre de bûches portées.
 var count := 0
-## Or porté (un sac à la fois).
+## Or porté dans le sac à dos.
 var gold := 0
 
-var _target: WoodLog
+## Objet visé au sol : une bûche (`WoodLog`) ou un sac d'or (`GoldSack`).
+var _target: RigidBody3D
 var _prompt := ""
 var _stack_root: Node3D
 var _stack: Array[Node3D] = []
@@ -54,9 +58,8 @@ var _unloading := false
 var _unload_timer := 0.0
 ## Choc de bois du ramassage, non spatialisé (la pile est sur l'épaule du joueur).
 var _pickup_audio: AudioStreamPlayer
-## Mine dans la zone de laquelle se trouve le joueur, et temps de minage accumulé.
+## Mine à l'intérieur de laquelle se trouve le joueur (null dehors).
 var _mine: GoldMine
-var _mining_time := 0.0
 ## Chantier à portée (null si aucun).
 var _site: CampBuilding
 var _progress := -1.0
@@ -84,37 +87,26 @@ func _physics_process(delta: float) -> void:
 		_stack_root.position = _body.get_left_shoulder_local() + STACK_OFFSET
 	_update_target()
 	_site = _find_site()
-	var can_pick := _target != null and count < GameConfig.BASE_WOOD_CAPACITY
+	var can_pick := _can_pick()
 	var can_deposit := _stockpile != null and (count > 0 or (gold > 0 and _stockpile.accepts_gold))
 	var progress := -1.0
 	if _player.is_dead():
 		_unloading = false
 	elif Input.is_action_just_pressed("interact") and can_pick:
-		pick_up(_target)
+		if _target is GoldSack:
+			_pick_up_sack(_target as GoldSack)
+		else:
+			pick_up(_target as WoodLog)
 	elif Input.is_action_just_pressed("interact") and can_deposit:
 		_unloading = count > 0
 		if gold > 0 and _stockpile.accepts_gold:
 			CampEconomy.instance.add_gold(gold)
-			gold = 0
-			gold_changed.emit(gold)
+			_set_gold(0)
 			_play_knock(1.6)
-	elif Input.is_action_pressed("interact") and not can_pick and not can_deposit:
-		if _site:
-			_site.work(delta)
-			progress = _site.build_progress
-			_work_feedback(delta)
-		elif _mine and gold == 0:
-			_mining_time += delta
-			progress = _mining_time / GameConfig.MINING_TIME
-			_work_feedback(delta)
-			if _mining_time >= GameConfig.MINING_TIME:
-				_mining_time = 0.0
-				progress = -1.0
-				gold = GameConfig.GOLD_PER_TRIP
-				gold_changed.emit(gold)
-				_play_knock(1.6)
-	if progress < 0.0:
-		_mining_time = 0.0
+	elif Input.is_action_pressed("interact") and not can_pick and not can_deposit and _site:
+		_site.work(delta)
+		progress = _site.build_progress
+		_work_feedback(delta)
 	if progress != _progress:
 		_progress = progress
 		progress_changed.emit(progress)
@@ -130,9 +122,18 @@ func _update_target() -> void:
 	var from := _camera.global_position
 	var query := PhysicsRayQueryParameters3D.create(from, from - _camera.global_basis.z * GameConfig.PICKUP_RANGE, 8)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	_target = hit.collider as WoodLog if not hit.is_empty() else null
-	if _target and _target.is_queued_for_deletion():
+	_target = hit.collider as RigidBody3D if not hit.is_empty() else null
+	if _target and (_target.is_queued_for_deletion() or not (_target is WoodLog or _target is GoldSack)):
 		_target = null
+
+
+## Peut-on ramasser l'objet visé ? Bois et or s'excluent, et chaque charge a sa capacité.
+func _can_pick() -> bool:
+	if _target is WoodLog:
+		return gold == 0 and count < GameConfig.BASE_WOOD_CAPACITY
+	if _target is GoldSack:
+		return count == 0 and gold < GameConfig.BASE_GOLD_CAPACITY
+	return false
 
 
 func _update_prompt(can_pick: bool, can_deposit: bool) -> void:
@@ -140,24 +141,30 @@ func _update_prompt(can_pick: bool, can_deposit: bool) -> void:
 	if _player.is_dead():
 		text = ""
 	elif can_pick:
-		text = "[E] Ramasser"
+		text = "[E] Ramasser le sac d'or (%d)" % (_target as GoldSack).amount if _target is GoldSack else "[E] Ramasser"
 	elif can_deposit:
 		if _unloading:
 			text = ""
-		elif count > 0 and gold > 0 and _stockpile.accepts_gold:
-			text = "[E] Déposer le bois (%d) et l'or (%d)" % [count, gold]
 		elif count > 0:
 			text = "[E] Déposer le bois (%d)" % count
 		else:
 			text = "[E] Déposer l'or (%d)" % gold
 	elif _site:
 		text = "[E] Construire : %s (maintenir)" % _site.building_name
-	elif _mine and gold == 0:
-		text = "[E] Miner l'or (maintenir)"
-	elif _mine:
-		text = "Sac plein : rapporte l'or au bastion"
-	elif _target:
+	elif _target is WoodLog and gold > 0:
+		text = "Dépose d'abord ton or"
+	elif _target is GoldSack and count > 0:
+		text = "Dépose d'abord ton bois"
+	elif _target is WoodLog:
 		text = "Charge pleine (%d/%d)" % [count, GameConfig.BASE_WOOD_CAPACITY]
+	elif _target is GoldSack:
+		text = "Sac plein (%d/%d)" % [gold, GameConfig.BASE_GOLD_CAPACITY]
+	elif _mine and count > 0:
+		text = "Dépose d'abord ton bois pour miner"
+	elif _mine and gold >= GameConfig.BASE_GOLD_CAPACITY:
+		text = "Sac plein : rapporte l'or au bastion"
+	elif _mine:
+		text = "Frappe une veine d'or à la pioche (clic gauche)"
 	_set_prompt(text)
 
 
@@ -206,17 +213,47 @@ func _update_pop(delta: float) -> void:
 		_popping = null
 
 
-# --- Mine et chantiers -------------------------------------------------------------------------
+# --- Or ------------------------------------------------------------------------------------------
 
-## Appelé par la mine quand le joueur entre dans sa zone / en sort.
+## Appelé par la mine quand le joueur y entre : il sort sa pioche.
 func enter_mine(mine: GoldMine) -> void:
 	_mine = mine
+	_body.set_pickaxe(true)
 
 
+## Appelé par la mine quand le joueur en sort : il reprend sa hache.
 func exit_mine(mine: GoldMine) -> void:
 	if _mine == mine:
 		_mine = null
+		_body.set_pickaxe(false)
 
+
+## Coup de pioche réussi sur une veine : l'or va dans le sac à dos, s'il reste de la place et qu'on
+## ne porte pas de bois.
+func mine_vein(vein: GoldVein) -> void:
+	if count > 0 or gold >= GameConfig.BASE_GOLD_CAPACITY:
+		return
+	var taken := vein.extract(mini(GameConfig.GOLD_PER_SWING, GameConfig.BASE_GOLD_CAPACITY - gold))
+	if taken > 0:
+		_set_gold(gold + taken)
+
+
+func _pick_up_sack(sack: GoldSack) -> void:
+	var taken := mini(sack.amount, GameConfig.BASE_GOLD_CAPACITY - gold)
+	sack.amount -= taken
+	if sack.amount <= 0:
+		sack.queue_free()
+	_set_gold(gold + taken)
+	_play_knock(1.6)
+
+
+func _set_gold(amount: int) -> void:
+	gold = amount
+	_body.set_backpack_fill(float(gold) / GameConfig.BASE_GOLD_CAPACITY)
+	gold_changed.emit(gold)
+
+
+# --- Chantiers -----------------------------------------------------------------------------------
 
 ## Chantier du camp le plus proche à portée de travail.
 func _find_site() -> CampBuilding:
@@ -249,17 +286,30 @@ func _play_knock(pitch: float) -> void:
 	_pickup_audio.play()
 
 
-## Le joueur est mort : il perd ce qu'il portait.
-func drop_all() -> void:
+## Le joueur est mort : sa charge tombe au sol, où elle peut être ramassée (§4.5).
+func drop_on_ground() -> void:
+	var world := _player.get_parent()
+	var origin := _player.global_position + Vector3(0.0, 1.0, 0.0)
+	for index in count:
+		var wood_log: WoodLog = LOG_SCENE.instantiate()
+		world.add_child(wood_log)
+		# En couronne autour du corps, pour ne pas naître dans sa capsule de collision.
+		var around := Vector3.FORWARD.rotated(Vector3.UP, TAU * index / count) * 0.9
+		wood_log.global_position = origin + around + Vector3(0.0, index * 0.12, 0.0)
+		wood_log.rotation.y = randf() * TAU
+	if gold > 0:
+		var sack := GoldSack.new()
+		sack.amount = gold
+		world.add_child(sack)
+		sack.global_position = origin
 	for carried in _stack:
 		carried.queue_free()
 	_stack.clear()
 	_popping = null
 	_unloading = false
 	count = 0
-	gold = 0
 	load_changed.emit(count, GameConfig.BASE_WOOD_CAPACITY)
-	gold_changed.emit(gold)
+	_set_gold(0)
 
 
 # --- Dépôt au camp ----------------------------------------------------------------------------

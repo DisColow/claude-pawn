@@ -11,7 +11,7 @@ OUT = "scenes/world/test_forest.tscn"
 
 SPACING = 2.6          # pas moyen de la grille d'arbres (m)
 JITTER = 0.7           # décalage aléatoire autour de la grille (m)
-FOREST_RADIUS = 42.0   # au-delà, le brouillard prend le relais
+FOREST_RADIUS = 46.0   # au-delà, le brouillard prend le relais
 CLEARING = 17.0        # rayon moyen de la clairière (arbres exclus)
 DIRT_SIZE = 38.0       # taille du décalque de terre battue
 PLAYER_SPAWN = (0.0, 8.0)
@@ -25,9 +25,9 @@ BUILD_SLOTS = [
 ]
 ROAD = (-3.5, 3.5, -43.0, -15.0)   # route du nord par où arrivent les squelettes : x min, x max, z min, z max
 ENEMY_SPAWNS = [(-1.5, -38.0), (1.5, -38.0)]
-MINE = (31.0, 2.0, 0.0)            # mine d'or à l'est : x, z, lacet
-MINE_CLEARING = 8.0                # rayon dégagé autour de la mine
-MINE_PATH = (15.0, 26.0, -1.5, 5.5)  # sentier entre la clairière et la mine
+MINE = (36.0, 2.0, -math.pi / 2)   # mine d'or à l'est : x, z, lacet (entrée tournée vers le camp)
+MINE_CLEARING = 11.0               # rayon dégagé autour de la mine
+MINE_PATH = (15.0, 27.0, -1.5, 5.5)  # sentier entre la clairière et la mine
 
 # (scène, poids, échelle min, échelle max) — majorité de sapins comme dans Lordaeron.
 SPECIES = [

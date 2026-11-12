@@ -17,4 +17,5 @@ Les sons d'arbre (`tree_crash.ogg`, `tree_fall_thud.ogg`) sont des extraits déc
 
 ## Fumée du ramassage ninja
 
+- `make_pickaxe.py` : fabrique `assets/models/props/pickaxe.glb` (pioche du péon, mêmes conventions de prise que la hache) avec Blender.
 - `make_poof_texture.py` : dérive `assets/vfx/poof_puff.png` (bouffée blanche opaque) de `smoke_07.png` (Kenney, CC0).

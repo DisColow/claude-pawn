@@ -28,6 +28,14 @@ const AXE_IN_HAND := Transform3D(Vector3(0, -1, 0), Vector3(0, 0, 1), Vector3(-1
 
 @export var model_scene: PackedScene = preload("res://assets/models/characters/orc_worker.glb")
 @export var axe_scene: PackedScene = preload("res://assets/models/props/axe.glb")
+@export var pickaxe_scene: PackedScene = preload("res://assets/models/props/pickaxe.glb")
+const SACK_SCENE := preload("res://assets/models/mine/sack.gltf")
+## Sac à dos : position par rapport à l'os du haut du dos, dans le repère du corps (derrière = +Z).
+const BACKPACK_OFFSET := Vector3(0.0, -0.12, 0.17)
+
+## Attaches de l'outil (modèle visible, modèle d'ombre) et sac à dos.
+var _tool_attachments: Array[BoneAttachment3D] = []
+var _backpack: Node3D
 
 ## Inclinaison du regard (rad). Écrite par le joueur.
 var look_pitch := 0.0
@@ -241,20 +249,55 @@ func _finger_filter(skeleton_path: String, side: String) -> AnimationNodeBlend2:
 	return blend
 
 
-func _attach_axe(target_skeleton: Skeleton3D, shadow_only: bool) -> void:
+func _attach_axe(target_skeleton: Skeleton3D, _shadow_only: bool) -> void:
 	var attachment := BoneAttachment3D.new()
 	attachment.name = "AxeAttachment"
 	target_skeleton.add_child(attachment)
 	attachment.bone_name = "hand_r"
-	var axe: Node3D = axe_scene.instantiate()
-	axe.name = "Axe"
-	axe.transform = AXE_IN_HAND
-	attachment.add_child(axe)
+	_tool_attachments.append(attachment)
+	_put_tool(attachment, axe_scene, _tool_attachments.size() == 2)
+
+
+## Change l'outil tenu en main : pioche dans la mine, hache ailleurs.
+func set_pickaxe(use_pickaxe: bool) -> void:
+	for index in _tool_attachments.size():
+		_put_tool(_tool_attachments[index], pickaxe_scene if use_pickaxe else axe_scene, index == 1)
+
+
+func _put_tool(attachment: BoneAttachment3D, scene: PackedScene, shadow_only: bool) -> void:
+	for child in attachment.get_children():
+		attachment.remove_child(child)
+		child.queue_free()
+	var held: Node3D = scene.instantiate()
+	held.name = "Axe"
+	held.transform = AXE_IN_HAND
+	attachment.add_child(held)
 	if shadow_only:
-		_set_shadow_mode(axe, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY)
+		_set_shadow_mode(held, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY)
 	else:
-		_set_shadow_mode(axe, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
-		ZClip.apply(axe)
+		_set_shadow_mode(held, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+		ZClip.apply(held)
+
+
+## Sac à dos (or) : visible sur le dos et dans l'ombre dès qu'on porte de l'or, il gonfle avec la charge.
+func set_backpack_fill(ratio: float) -> void:
+	if _backpack == null:
+		var attachment := BoneAttachment3D.new()
+		attachment.name = "BackpackAttachment"
+		skeleton.add_child(attachment)
+		attachment.bone_name = "spine_03"
+		_backpack = SACK_SCENE.instantiate()
+		attachment.add_child(_backpack)
+		# Placement exprimé dans le repère du corps (quelle que soit l'orientation de l'os), figé
+		# ensuite dans le repère de l'os pour suivre l'animation.
+		# (L'attache vient d'être créée : on lit la pose de l'os sur le squelette, pas sur elle.)
+		var bone_global := skeleton.global_transform * skeleton.get_bone_global_pose(skeleton.find_bone("spine_03"))
+		var wanted := Transform3D(global_basis.orthonormalized() * Basis(Vector3.RIGHT, PI * 0.5),
+			bone_global.origin + global_basis.orthonormalized() * BACKPACK_OFFSET)
+		_backpack.set_meta("base", bone_global.affine_inverse() * wanted)
+	_backpack.visible = ratio > 0.0
+	var base: Transform3D = _backpack.get_meta("base")
+	_backpack.transform = base.scaled_local(Vector3.ONE * (2.2 + 1.3 * clampf(ratio, 0.0, 1.0)))
 
 
 func _set_shadow_mode(root: Node, mode: GeometryInstance3D.ShadowCastingSetting) -> void:

@@ -1,5 +1,5 @@
 extends SceneTree
-# Partie complète dans la forêt : ordres du Général, mine d'or, construction par le péon, grunts, vague de squelettes, tours, combat et mort du joueur, défaite (ou victoire avec l'argument "victory").
+# Partie complète dans la forêt : ordres du Général, mine d'or (veines à la pioche), construction par le péon, grunts, vague de squelettes, tours, combat et mort du joueur, défaite (ou victoire avec l'argument "victory").
 # usage : xvfb-run -a -s "-screen 0 1600x900x24" godot --path . --resolution 960x540 -s res://tests/game_test.gd -- prefixe [victory]
 var out := ""
 var world: Node
@@ -56,9 +56,17 @@ func run() -> void:
 	# --- Mine d'or -> bastion
 	var mine: Node3D = world.get_node("GoldMine")
 	player.camera.current = true
-	player.global_position = mine.global_position + Vector3(-4.6, 0, 0); look_at_point(mine.global_position + Vector3(0, 2, 0)); await frames(20)
-	print("mine : invite='", player.carrier._prompt, "'"); await shot("mine")
-	Input.action_press("interact"); await frames(100); await shot("mining"); await frames(70); Input.action_release("interact"); await frames(3)
+	var mouth := mine.global_position + mine.global_basis.z * 13.0
+	player.global_position = Vector3(mouth.x, 0, mouth.z); look_at_point(mine.global_position + Vector3(0, 2, 0)); await frames(20)
+	await shot("mine")
+	var vein: GoldVein = get_nodes_in_group("gold_veins")[4]
+	var front := vein.global_position - vein.global_basis.z * 1.7
+	player.global_position = Vector3(front.x, 0, front.z); await frames(20)
+	print("mine : invite='", player.carrier._prompt, "'")
+	for i in GameConfig.BASE_GOLD_CAPACITY:
+		look_at_point(vein.global_position); player.axe.request_swing()
+		await frames(int(GameConfig.AXE_SWING_DURATION * 60) + 4)
+		if i == 4: await shot("mining")
 	print("mine : or porté=", player.carrier.gold, " invite='", player.carrier._prompt, "'")
 	player.global_position = Vector3(1.5, 0, 3.0); look_at_point(Vector3(0, 4, -6)); await frames(20)
 	print("bastion : invite='", player.carrier._prompt, "'"); await shot("bastion")

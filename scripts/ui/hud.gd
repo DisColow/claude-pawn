@@ -112,7 +112,7 @@ func _update_load() -> void:
 	if _wood_carried > 0:
 		parts.append("Bois : %d / %d" % [_wood_carried, GameConfig.BASE_WOOD_CAPACITY])
 	if _gold_carried > 0:
-		parts.append("Or : %d" % _gold_carried)
+		parts.append("Or : %d / %d" % [_gold_carried, GameConfig.BASE_GOLD_CAPACITY])
 	_load.text = "    ".join(parts)
 
 

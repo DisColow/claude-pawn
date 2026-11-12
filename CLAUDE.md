@@ -51,6 +51,7 @@ Scripts dans `tests/` (en-tête de chaque fichier = usage) :
 - `deposit_test.gd` — pile de bois seule (E dans la zone) : vol des rondins, stock global, pile qui grandit, collision.
 - `building_test.gd` — scierie : chantier par étapes, points de vie, dépôt refusé hors « debout », dégâts, destruction, reconstruction.
 - `game_test.gd` — partie complète dans la forêt : ordres du Général, mine d'or, construction par le péon, grunts, vague, tours, combat et mort du joueur, défaite (argument `victory` : victoire). Long (~5 min).
+- `mine_test.gd` — mine d'or : entrer, pioche en main, 1 or par coup jusqu'à 10, veine qui s'épuise, bois et or exclusifs, charge lâchée à la mort puis ramassée, sac à dos.
 - `props_test.gd` — rocher bloquant, buisson traversable qui froisse.
 - `preview.gd` — aperçu de modèles/scènes.
 
