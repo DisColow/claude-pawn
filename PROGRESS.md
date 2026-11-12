@@ -5,28 +5,34 @@
 
 ## Où on en est
 
-- **Branche de travail** : `feature/decoupe-bois` (seule branche du dépôt `DisColow/claude-pawn` ; `main` n'existe pas encore — décision en attente, voir plus bas).
-- **Fait** : le MVP du cahier des charges (§3.1 à §3.3) puis, sur demande « développe tout le jeu » (2026-11-11), **une boucle de jeu complète** déduite de la vision §1 : or, bastion, Général, construction par le péon, squelettes, grunts, tours, victoire / défaite. **Rien de cette boucle n'a encore été joué par l'utilisateur** : équilibrage et sensations à valider.
-- **2026-11-12 : l'utilisateur a fourni le cahier des charges complet** (`docs/PAWN_Specification_1.pdf`) et demande de le suivre. La boucle de jeu inventée la veille s'en écarte sur de nombreux points (voir « Écarts avec le PDF »). Il a validé l'ordre de réalignement (voir « Plan de réalignement ») et confirmé Godot. **Tranche 1 faite** (péon : mine, pioche, sac à dos, charges exclusives, charge lâchée à la mort). **Prochaine étape : tranche 2.**
+- **Branche de travail** : `feature/decoupe-bois` (seule branche du dépôt `DisColow/claude-pawn`).
+- **Référence** : `docs/PAWN_Specification_1.pdf`, fourni le 2026-11-12. L'utilisateur a validé le plan de réalignement, confirmé Godot, puis demandé de **tout faire d'une traite** (« je vois ensuite »).
+- **Fait le 2026-11-12** : les cinq tranches du plan, en une première version jouable de bout en bout (menu → partie → Renom). Les tests automatiques passent ; **l'utilisateur n'a encore rien joué de cette version**.
+- **Ses remarques du 2026-11-12, intégrées** : chantiers en fantôme vert jusqu'au premier coup, marteau, dépôt direct dans le bâtiment, autres unités de l'IA, mine « toute buguée » (cause trouvée : voir Mine).
+- **Prochaine étape** : ses retours après essai. Les manques connus sont listés dans « Écarts restants avec le PDF ».
 
 ## Fait
 
 | Domaine | Contenu | Fichiers clés |
 |---|---|---|
-| Config | Toutes les valeurs d'équilibrage / game feel (autoload `GameConfig`) | `scripts/core/game_config.gd` |
-| Arbre | 100 PV, 4 coups (25 dmg), petits éclats d'écorce éjectés à l'opposé du mouvement de la hache (direction transmise par `AxeController`), oscillation élastique (ressort amorti), son d'impact aléatoire, hit-stop. À 0 PV : **le tronc explose en 4 rondins** projetés à l'opposé du joueur + poussière/feuilles + fracas + secousse. La souche reste, **sans collision** (traversable). Charnière et collisions déduites des meshes. | `scripts/trees/choppable_tree.gd`, `scenes/trees/*.tscn` |
-| Rondins | `WoodLog` (RigidBody3D, couche 4 « logs »), son au choc, groupe `wood_logs`. | `scripts/props/wood_log.gd`, `scenes/props/wood_log.tscn` |
-| VFX | `WoodChipsVFX` (7 éclats d'écorce discrets), `DustImpactVFX` (GPUParticles3D one-shot, base `OneShotVFX`), `poof_vfx.tscn` (disparition en fumée, muette) | `scripts/vfx/`, `scenes/vfx/` |
-| Joueur | Orc avec **oreilles pointues et défenses** (`OrcHeadParts`, modèles CC-BY greffés sur l'os Head ; visibles dans l'ombre, la tête étant masquée en vue subjective). CharacterBody3D : marche 5,2 / sprint 8,2 + endurance, saut, pas. Corps d'orc complet animé (AnimationTree : idle/walk/jog/sprint/jump + poing fermé), tête/cou masqués, **squelette d'ombre** (ombre complète), corps reculé quand on regarde en bas / court. Bras droit en **IK** (TwoBoneIK3D) tenant la hache ; coup **procédural** en espace caméra (élan, arc, hit-stop, retour), raycast d'impact. Camera shake par trauma. Z-clip (`z_clip_scale 0.1`) sur bras/hache/corps. `get_carry_speed_multiplier()` déjà câblé (-35 % à 10 rondins). | `scripts/player/*.gd`, `scenes/player/player.tscn` |
-| Ramassage / portage | `LogCarrier` (enfant du joueur) : viser une bûche (rayon caméra, 2,3 m) → « [E] Ramasser ». **Ramassage « ninja »** : la bûche disparaît instantanément dans un nuage de fumée blanche (`PoofVFX` : bouffées opaques qui gonflent d'un coup + anneau de petites bouffées) et **un choc de bois est joué** (non spatialisé ; les impacts de bois Kenney déjà utilisés pour la hache, joués 30 % plus aigus, +2 % par bûche portée) et apparaît sur la pile avec un petit rebond. Aucun temps mort : on peut bouger et frapper pendant. Pile sur l'épaule gauche (4+4+2, bûches à 50 %), z-clip + copie d'ombre, **main gauche (2e `TwoBoneIK3D`) qui la tient**. Capacité 10, « Charge pleine », pénalité -35 %. | `scripts/player/log_carrier.gd`, `scenes/vfx/poof_vfx.tscn` |
-| Bâtiments | `CampBuilding` (StaticBody3D, groupe `camp_buildings`) : états chantier / debout / ruines, chacun avec son modèle KayKit (×4,5) et sa boîte de collision ; `begin_construction()` puis `work(delta)` (étapes A/B/C sous échafaudage, PV de 10 % à 100 % ; `auto_build` pour les tests), `take_damage()` (pour les ennemis ; la hache du joueur, qui appelle `take_hit`, ne l'abîme pas), `repair()`, signaux `state_changed` / `health_changed` ; nom + barre de vie en 3D ; effondrement avec poussière, son et secousse. Valeurs par bâtiment dans `GameConfig.BUILDINGS[kind]`. Un enfant `Yard` n'accepte les dépôts que si le bâtiment est debout ; le stock est conservé si le bâtiment est détruit. `LumberMill` : scie qui tourne. | `scripts/camp/camp_building.gd`, `scripts/camp/lumber_mill.gd`, `scenes/camp/lumber_mill.tscn`, `assets/models/buildings/` |
-| Boucle de jeu | **Économie** : `CampEconomy` (bois, or, `spend`). **Or** : voir « Mine d'or » ; il se dépose avec E dans la cour du bastion. **Bastion** (`Bastion`, 2500 PV, groupe `bastion`) : dépôt bois + or, sa destruction = défaite. **Général** (`General`) : plan = enfants de `BuildSlots` dans l'ordre (scierie, tour, caserne, tour), paie avec le stock, pose le chantier, recommande les bâtiments détruits, puis lève des grunts à la caserne (25 or, 6 max) ; ses ordres s'affichent en haut du HUD. **Construction** : le chantier n'avance que si le péon maintient E à moins de 3 m (`CampBuilding.work`). **Vagues** (`GameDirector`) : 8 vagues (1re à 150 s, puis toutes les 75 s, 2 squelettes + 1,5 par vague, guerriers dès la 3e) par la route du nord ; victoire quand la dernière est repoussée. **Unités** (`Unit`, couche 5) : squelettes (visent joueur et grunts proches, sinon le bâtiment le plus proche) et grunts (orc + hache, gardent la caserne) ; contournement d'obstacle au jugé, barre de vie, recul. **Tour de guet** (`WatchTower`) : tire à 16 m. **Joueur** : 100 PV, régénération hors combat, mort → perd sa charge, réapparaît après 6 s. **Fin** : écran victoire / défaite, R pour rejouer. Touches de test K (dégâts au bâtiment proche) et N (vague suivante). | `scripts/ai/general.gd`, `scripts/core/game_director.gd`, `scripts/units/unit.gd`, `scripts/camp/*.gd`, `scripts/world/gold_mine.gd`, `scenes/units/`, `scenes/camp/` |
-| Mine d'or (§5.1) | `GoldMine` : coque bâtie par script (salle 7 × 9 m, galerie d'entrée, collisions) enveloppée de montagnes KayKit, cadre en rondins. À l'intérieur (Area3D), le péon **sort sa pioche** (`FirstPersonBody.set_pickaxe`), la hache revient dehors. Six `GoldVein` sur les parois : chaque coup d'outil qui touche en tire 1 or (`LogCarrier.mine_vein`), étincelles dorées (`GoldSparksVFX`), tintement ; la veine (40 or) perd ses pépites et sa lueur en s'épuisant, regagne 1 or / 6 s. **Sac à dos** visible sur le dos (os `spine_03`), qui gonfle avec l'or ; capacité 10, -15 % de vitesse à plein. **Bois et or exclusifs.** À la mort, le bois retombe en `WoodLog` et l'or en `GoldSack` ramassable avec E. | `scripts/world/gold_mine.gd`, `scripts/world/gold_vein.gd`, `scripts/props/gold_sack.gd`, `scripts/vfx/gold_sparks_vfx.gd`, `assets/models/mine/`, `assets/models/props/pickaxe.glb` |
-| Dépôt au camp | `WoodStockpile` dans la cour du bastion (accepte l'or) et de la scierie (4 piquets, propriété `enabled`). Dans sa zone (Area3D, 7 × 5,4 m) avec du bois : « [E] Déposer le bois (n) ». Les rondins partent de l'épaule un par un (0,09 s) et **volent en cloche jusqu'à la pile**, qui grandit : 3 tas en pyramide de 28 (MultiMesh, 84 visibles ; au-delà seul le compteur monte), une boîte de collision par tas. Sortir de la zone interrompt le déchargement (le reste est gardé). Stock global : autoload `Camp` (`CampEconomy.instance.wood`, signal `wood_changed`), crédité quand le rondin quitte l'épaule. | `scripts/camp/wood_stockpile.gd`, `scenes/camp/wood_stockpile.tscn`, `scripts/core/camp_economy.gd` |
-| HUD | Réticule, jauge d'endurance, invite (ramassage / dépôt), compteur « Bois : n / 10 », stock « Camp — Bois : n » | `scenes/ui/hud.tscn` |
-| Décor | **Rochers solides** (`SolidProp` : collision convexe calculée depuis le mesh, en cache) ; **buissons traversables qui froissent** (`RustlingBush` : son de feuilles + frémissement, répété tant qu'on s'y déplace). | `scripts/props/`, `scenes/props/` |
-| Monde | Forêt de test **façon Warcraft 3** générée par `tools/level_gen/gen_test_forest.py` : clairière de terre battue (rayon 17 m) avec le bastion, route du nord (ennemis), sentier et mine à l'est, **842 arbres coupables** serrés (grille perturbée, pas 2,6 m ; 85 % de sapins `tree_4_c`), rochers solides, buissons qui froissent, herbe ; soleil haut (70°) dans le dos du joueur, clairière ensoleillée. Rayons de tronc mis en cache par modèle, oscillation calculée seulement quand un arbre bouge. | `scenes/world/test_forest.tscn`, `tools/level_gen/` |
-| Assets | KayKit, Quaternius, Kenney, OpenGameArt (CC0 sauf `tree_crash.ogg` CC-BY 3.0) | `CREDITS.md`, `tools/asset_pipeline/` |
+| Données | Tout l'équilibrage et tout le contenu : bâtiments, unités, apparences par camp, héros, triangle des types, Général, ordres / loyauté / confiance, influence, XP, talents, Renom, améliorations, campagne, cartes. | `scripts/core/game_config.gd` |
+| Péon (§4) | Vue subjective avec corps complet (IK, ombre, z-clip), marche / sprint / saut / endurance, roulade (à débloquer), vie, régénération, mort. Statistiques = base + talents + améliorations permanentes (`max_health()`, `wood_capacity()`, `swing_speed()`…). Manette et souris. | `scripts/player/player.gd`, `first_person_body.gd`, `axe_controller.gd` |
+| Bois (§5.2) | Arbre : 4 coups, éclats, oscillation, hit-stop, puis **explosion en 4 rondins** (décision de l'utilisateur, à la place de la chute physique). Ramassage « ninja » en fumée, pile sur l'épaule gauche, hache toujours active. | `scripts/trees/choppable_tree.gd`, `scripts/player/log_carrier.gd` |
+| Or (§5.1) | `GoldMine` : galerie où l'on entre (salle 11 × 13 m étayée de poutres, lanternes, éboulis), huit `GoldVein` ; la pioche sort toute seule dedans ; 1 or par coup, étincelles ; veines qui s'épuisent et se reconstituent ; sac à dos visible. **Les montagnes entourent la coque sans la recouper** (leurs blocs imbriqués remplissaient la salle : c'était le bug). | `scripts/world/gold_mine.gd`, `gold_vein.gd` |
+| Portage (§4.4) | Bois OU or. Dépôt avec E **contre** l'hôtel de ville ou un entrepôt, de n'importe quel côté ; les rondins volent dans le bâtiment. À la mort, la charge tombe au sol (bûches, `GoldSack`) et se ramasse. | `scripts/player/log_carrier.gd` |
+| Bâtiments (§10.2) | `CampBuilding` générique : 12 bâtiments en données (Loge de guerre → Bastion → Forteresse, Terrier, Caserne, Forge, Tour de guet, Entrepôt, Loge de chasse, Enclos des bêtes, Hutte des esprits, Autel des ancêtres, Aire céleste, Atelier), rouges pour nous, bleus pour l'ennemi. **Fantôme vert intangible** tant que personne n'a frappé, puis étapes sous échafaudage, ruines, reconstruction. Nourriture, tour qui tire, paliers. | `scripts/camp/camp_building.gd`, `scenes/camp/building.tscn` |
+| Construction | Maintenir E devant un chantier ou un bâtiment abîmé : le **marteau** sort, le travail commence au premier coup porté, étincelles. Talents : vitesse, Renforcé, Architecte (F), Barricade (B). | `scripts/player/log_carrier.gd`, `assets/models/props/hammer.glb` |
+| Unités (§10.3-10.5) | `Unit` générique : péon du Général (récolte, chantier, milice), Cogneur, Tirailleur, Chevaucheur, Mastodonte, Mande-tempête, Parle-sang (soigne), Pillard céleste et Saboteur (volants), Démolisseur (siège), 4 héros à niveaux. Triangle mêlée > distance > volant > mêlée. Ordres GUARD / ASSAULT, trajets par `NavGraph`. Orcs = modèle du péon teinté et armé ; ennemis = squelettes KayKit (faction de remplacement). | `scripts/units/unit.gd`, `scripts/core/nav_graph.gd` |
+| Général (§6, §10) | Un par camp : péons, plan de construction, paliers, forge, composition d'armée, héros (recrute, renvoie se soigner), colonise une mine, défend, sonne l'appel aux armes, lance et rappelle les assauts. **Erreurs volontaires** du catalogue §6.3 (8 erreurs), plus ou moins fréquentes selon la difficulté. | `scripts/ai/general.gd` |
+| Ordres, loyauté, confiance (§6.2-6.6) | Jusqu'à 3 ordres (récolter, bâtir, coloniser, réparer, défendre, attaquer), jamais obligatoires ; faisceau lumineux et ping sur la minimap. Loyauté : à 0, escouade d'exécuteurs, sursis si on se rachète. Confiance : exploits et bons conseils. | `scripts/ai/worker_orders.gd` |
+| Influence (§7) | Roue de communication (Q) : 8 suggestions, acceptation selon confiance + justesse + hasard, délai entre deux, XP si acceptée, bonus si elle corrigeait une vraie erreur. | `scripts/ui/comm_wheel.gd`, `scripts/ai/worker_orders.gd`, `General.evaluate()` |
+| Talents (§8) | XP (dépôts, chantier, ennemis tués, ordres, conseils), 30 niveaux, 3 arbres × 5 paliers (21 talents), redistribution avec délai, remise à zéro à la mort. | `scripts/progress/worker_progress.gd`, `scripts/ui/talent_screen.gd` |
+| Renom (§9) | Calculé en fin de partie (victoire, dépôts du joueur, ennemis tués, bons conseils, survie), dépensé au menu en 11 améliorations permanentes ; sauvegarde `user://pawn_save.json` (Renom, améliorations, campagne, options, touches). | `scripts/progress/meta_progress.gd` |
+| Partie (§10.8) | `GameDirector` : victoire = loge ennemie détruite, défaite = la nôtre ; réapparition = nouveau péon payé par le Général après le combat ; écran de fin avec détail du Renom. | `scripts/core/game_director.gd` |
+| Modes (§2) | Menu : Partie libre (2 cartes, 3 difficultés), Campagne « L'Ascension » (3 missions à dialogues, débloquées en chaîne), Progression, Options (sensibilité, volume, touches). | `scripts/ui/main_menu.gd` |
+| HUD (§4.7) | Réticule, panneau d'ordres, message du Général (avec signal sonore), minimap (mines, bases, unités, pings), loyauté et confiance, vie et endurance, charge, niveau et XP, stock et nourriture du camp. | `scripts/ui/hud.gd`, `minimap.gd`, `ui_kit.gd` |
+| Cartes (§10.7) | « La Vallée » et « Le Carrefour » : deux bases, 16 emplacements chacune, mine principale, deux mines à coloniser, route, graphe de chemins, ~1600 arbres coupables. | `tools/level_gen/gen_maps.py`, `scenes/world/map_*.tscn` |
+| Décor, VFX, assets | Rochers solides, buissons qui froissent ; éclats, poussière, fumée, étincelles, traits de tir. Packs KayKit, Quaternius, Kenney, OpenGameArt. | `scripts/props/`, `scripts/vfx/`, `CREDITS.md` |
 
 ## Décisions prises (ne pas re-discuter sans l'utilisateur)
 
@@ -45,47 +51,36 @@
 - **`CampEconomy.instance`** plutôt que le nom de l'autoload : celui-ci n'existe pas quand Godot compile un script lancé avec `-s`, ce qui cassait tous les tests.
 - **Son de ramassage gratifiant** (2026-11-11) : le « poof » de bruit filtré était désagréable ; remplacé d'abord par des notes de marimba synthétisées (rejetées aussi : « pas du tout »), puis par un **choc bûche contre bûche** tiré de vrais enregistrements. Ne plus proposer de son synthétisé ou musical.
 - **Le dépôt de bois est un bâtiment** (2026-11-11, demandé par l'utilisateur, référence : bastion / scierie de Warcraft 3) : constructible par le Général, destructible par les ennemis, avec points de vie. Choix de Claude à confirmer : scierie plutôt que bastion, modèle KayKit Medieval Hexagon rouge, construction automatique dans le temps (le péon ne construit pas encore), stock conservé à la destruction, clairière agrandie (rayon 11 m).
-- **« Développe tout le jeu »** (2026-11-11) : l'utilisateur a laissé carte blanche. Choix de Claude, tous à confirmer : ennemis = squelettes (pack KayKit animé, CC0) ; défense par vagues plutôt que camp ennemi à détruire ; le péon construit en maintenant E ; le Général suit un plan fixe ; l'or se mine en maintenant E (pas de pioche) ; grunts = modèle du péon avec hache ; pas de sauvegarde.
+- **Remarques du 2026-11-12** : chantier en fantôme vert jusqu'au premier coup ; construction au marteau ; dépôt directement dans le bâtiment, de tous les côtés ; il faut d'autres unités de l'IA ; la mine était buguée.
+- **Camp ennemi = squelettes** (faction de remplacement prévue par le PDF, §19), mêmes bâtiments en bleu.
+- **« Développe tout le jeu »** (2026-11-11, remplacé depuis par le PDF) : l'utilisateur a laissé carte blanche. Choix de Claude, tous à confirmer : ennemis = squelettes (pack KayKit animé, CC0) ; défense par vagues plutôt que camp ennemi à détruire ; le péon construit en maintenant E ; le Général suit un plan fixe ; l'or se mine en maintenant E (pas de pioche) ; grunts = modèle du péon avec hache ; pas de sauvegarde.
 - **Après l'explosion, la souche n'a plus de collision** (demandé le 2026-11-07).
 - **Tous les arbres sont coupables** (plus d'arbres de décor), demandé le 2026-11-07.
 - Les arbres sont découpés hors-ligne (Blender) en souche + tronc ; les normales d'origine sont conservées (sinon anneau/traînées visibles à la jonction).
 
 ## Questions ouvertes (à poser à l'utilisateur)
 
-1. Dépôt : garder E, ou décharger automatiquement en approchant (`STOCKPILE_AUTO_DEPOSIT`) ?
-2. Boucle de jeu : l'équilibrage (coûts, délais des vagues, PV) convient-il ? Vagues ou camp ennemi à détruire ? Le Général doit-il choisir lui-même où bâtir ?
-3. Pistes non faites : pioche et animation de minage, sac d'or visible, sons dédiés (combat, tour, squelettes), menu / pause, sauvegarde, minimap, améliorations (capacité de portage, hache), autres ennemis, export Windows.
-4. Créer `main` à partir de la branche actuelle et travailler ensuite par branches de fonctionnalité + PR ?
+1. Chute physique de l'arbre et bois dans les deux bras (PDF) ou explosion en rondins et épaule (ses décisions précédentes) ?
+2. Équilibrage : une partie IA contre IA dure ~20 min ; le rythme lui convient-il ?
+3. Musique et sons : il a rejeté deux sons synthétisés ; il faut des fichiers ou des références de sa part.
+4. Créer `main` et passer aux branches de fonctionnalité + PR ?
 
-## Plan de réalignement sur le PDF (validé par l'utilisateur le 2026-11-12)
+## Écarts restants avec le PDF (à dire franchement à l'utilisateur)
 
-1. ✅ **Péon** : mine dans laquelle on entre, veines à la pioche, sac à dos, bois et or exclusifs, charge lâchée à la mort.
-2. **Camp ennemi** avec son Général à la place des vagues (victoire = détruire son hôtel de ville) ; bâtiments renommés selon le PDF, palier 1 d'abord (War Lodge, Burrow, Barracks, Forge) ; réapparition = péon entraîné par le Général.
-3. **Ordres facultatifs, loyauté et confiance**, puis roue de communication (influence).
-4. **XP, niveaux, arbres de talents**, puis Renom sauvegardé.
-5. Le reste : paliers 2 et 3, héros, minimap, menu et modes.
+Par décision de l'utilisateur : **Godot** au lieu d'Unity ; **explosion en rondins** au lieu de la chute physique (§5.2, critère §20.1) ; **bois sur l'épaule, hache active** au lieu des deux bras et outils rangés (§4.4). Les deux derniers n'ont pas été re-tranchés depuis le PDF.
 
-Points tranchés : on **garde Godot**. Sans réponse de l'utilisateur sur les deux autres conflits, ses décisions antérieures restent en vigueur : **explosion en rondins** (pas de chute physique) et **portage sur l'épaule, hache toujours active**.
+Simplifié :
+- Héros : niveaux et soins, mais pas de capacités actives ; le Maître des bêtes n'invoque rien.
+- Volants : mêmes modèles que les unités à pied, en lévitation (pas de monture ailée).
+- Orcs : toutes les unités partagent le modèle du péon (teinte, taille, arme) ; attaque à distance jouée avec l'animation d'épée.
+- Ordres : pas d'ordre « éclaireur » ni « transporter une pile ».
+- « Construire X » de la roue : propose le prochain bâtiment utile, sans choix dans une liste.
+- Unités : contournement d'obstacle au jugé + graphe de routes, pas de vraie recherche de chemin.
+- Péons de l'IA : récolte abstraite (ils n'abattent pas d'arbre et n'entrent pas dans la mine).
 
-## Écarts avec le PDF (relevés le 2026-11-12, avant tout réalignement)
+Absent : magie du joueur (§4.6), vol de monture, ragdolls (§12.3), **musique** et sons dédiés (§13.2 : tout réutilise les sons de bois existants), voix, unité de transport, cinématiques.
 
-Contredit le PDF :
-- Ennemis = vagues de squelettes ; le PDF veut un **camp ennemi avec son propre Général**, victoire = détruire son hôtel de ville (§10.8), pas de vagues.
-- Bâtiments : bastion / scierie / tour / caserne ; le PDF nomme War Lodge → Stronghold → Fortress, Burrow, Barracks, Forge, Hunt Lodge, Beast Pen, Spirit Hut, Ancestor Shrine, Watch Tower, Stockpile, Sky Roost, Workshop (§10.2). La scierie n'existe pas ; la tour de guet est de palier 2.
-- Unités : grunt unique ; le PDF veut Bruiser, Skirmisher, Outrider, Juggernaut, Stormcaller, Bloodspeaker, Sky Raider, Saboteur, Demolisher, 4 héros, triangle mêlée > distance > volant (§10.3-10.5).
-- Or : E maintenu devant la mine ; le PDF veut **entrer dans la mine** et frapper des veines à la pioche, 1 or par coup, sac à dos visible (§5.1).
-- Portage : bois et or ensemble ; le PDF les veut **exclusifs** (§4.4).
-- Mort : réapparition gratuite après 6 s, charge perdue ; le PDF veut un nouveau péon entraîné par le Général (coût + délai), charge lâchée au sol et récupérable, talents remis à zéro (§4.5).
-- Le Général ne fait qu'un plan fixe et n'est jamais désobéi ; le PDF veut des ordres facultatifs, loyauté (traître à 0), confiance, erreurs volontaires (§6).
-- Moteur : le PDF dit Unity / C# ; le projet est en Godot (décision antérieure de l'utilisateur).
-
-Contredit le PDF **par décision antérieure de l'utilisateur** (à lui de dire lequel prime) :
-- Arbre : le PDF veut une chute physique (§5.2, §12.2, critère §20.1) ; l'utilisateur a choisi l'explosion en rondins.
-- Bois : le PDF le veut dans les deux bras, vue en partie masquée, outils rangés pendant le portage (§4.4, fig. 5.2) ; l'amendement de `SPECIFICATIONS.md` dit épaule gauche, vue dégagée, hache toujours active.
-
-Absent : roue de communication et influence (§7), XP / 30 niveaux / 3 arbres de talents (§8), Renom et améliorations permanentes sauvegardées (§9), nourriture et plafond d'unités (§5.3), appel aux armes (§10.6), mines à coloniser (§10.7), minimap et panneau d'ordres (§4.7), roulade (§4.3), ramassage d'armes et magie (§4.6), ragdolls (§12.3), musique (§13.2), manette et touches reconfigurables (§14), modes Campagne et Partie libre avec menu (§2), sauvegarde locale (§16.5).
-
-Conforme : vue subjective avec corps visible, marche / sprint / saut / endurance, coupe avec éclats, oscillation, secousse et hit-stop, capacité 10, ralentissement en charge, dépôt qui crédite l'économie du Général, valeurs centralisées (`GameConfig`).
+Non vérifiable ici : 60 images/s sur PC (§20.5), tout ce qui est sonore, la manette (commandes déclarées, jamais essayées).
 
 ## Problèmes connus / dette
 
@@ -124,3 +119,4 @@ Conforme : vue subjective avec corps visible, marche / sprint / saut / endurance
 | 2026-11-11 | `4303cbb` | Boucle de jeu complète : or, bastion, Général, construction par le péon, squelettes, grunts, tours, vie du joueur, victoire / défaite, test `game_test` |
 | 2026-11-12 | `8771da5` | Ajout du cahier des charges complet (`docs/PAWN_Specification_1.pdf`) et relevé des écarts |
 | 2026-11-12 | `b7cba73` | Tranche 1 du réalignement : mine dans laquelle on entre, veines à la pioche, sac à dos, bois et or exclusifs, charge lâchée à la mort, test `mine_test` |
+| 2026-11-12 | `HASH` | Réalignement complet sur le PDF : deux camps et leurs Généraux, 12 bâtiments, 14 unités, ordres / loyauté / confiance, roue d'influence, talents, Renom sauvegardé, menu et campagne, minimap ; chantier fantôme, marteau, dépôt direct, mine refaite |

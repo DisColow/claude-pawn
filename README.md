@@ -6,82 +6,63 @@ Simulation d'ouvrier en vue FPS au cœur d'un RTS asymétrique — **Godot 4.7 (
 
 ## Le jeu
 
-Tu es le péon d'un camp orc dirigé par une IA, le **Général**. Il décide quoi bâtir et te donne ses ordres
-(en haut de l'écran) ; toi, tu coupes le bois, tu mines l'or, tu construis ses bâtiments et tu défends ta peau.
-Des vagues de squelettes arrivent par la route du nord. **Victoire** si le camp repousse les 8 vagues,
-**défaite** si le bastion tombe.
+Tu n'es pas le commandant : tu es **un péon** au milieu d'une vraie partie de stratégie que joue une IA, le
+**Général**. Il bâtit la base, gère l'économie, lève l'armée et attaque le camp d'en face, tenu par un autre
+Général. Toi, en vue subjective, tu coupes le bois, tu mines l'or, tu construis au marteau et, en dernier
+recours, tu te bats. **On gagne en rasant la loge de guerre ennemie ; on perd si la nôtre tombe.**
 
-| Élément | Rôle |
+Cahier des charges : `docs/PAWN_Specification_1.pdf`. Avancement et écarts : `PROGRESS.md`.
+
+| Système | En jeu |
 |---|---|
-| Bastion | Cœur du camp. On dépose le bois et l'or dans sa cour. S'il est détruit, c'est perdu. |
-| Mine d'or (à l'est) | On y entre : le péon sort sa pioche et frappe les veines d'or des parois (1 or par coup, 10 dans le sac à dos), puis rapporte l'or au bastion. |
-| Scierie | Premier bâtiment du plan ; second dépôt de bois. |
-| Tours de guet | Tirent sur les squelettes à portée. |
-| Caserne | Le Général y lève des grunts (25 or chacun, 6 au plus) qui défendent le camp. |
-
-Le Général paie chaque bâtiment avec le stock du camp et pose le chantier ; le péon le construit en
-maintenant E à côté. Un bâtiment détruit est recommandé par le Général (il faut le repayer et le rebâtir).
-Le péon porte du bois ou de l'or, jamais les deux. Il a 100 points de vie, se bat à la hache, et réapparaît au camp 6 secondes après sa mort ; sa charge tombe au sol, où il peut la reprendre.
+| Ordres | Panneau en haut à gauche. Les suivre fait monter la **loyauté**, les ignorer la fait baisser. À zéro, le Général te déclare traître et envoie une escouade. |
+| Influence | Maintenir **Q** : roue de 8 suggestions. Le Général se trompe exprès (il oublie l'or, n'entraîne pas de guerriers…) ; un bon conseil accepté rapporte XP et **confiance**, qui décide s'il t'écoute. |
+| Récolte | Bois : abattre un arbre, ramasser les bûches (E). Or : entrer dans la mine, frapper les veines à la pioche. On porte l'un ou l'autre. Dépôt avec E contre la loge ou un entrepôt, de n'importe quel côté. |
+| Construction | Le Général pose un chantier en **fantôme vert** ; maintenir E devant : le marteau sort, le bâtiment devient tangible au premier coup. E répare aussi les bâtiments abîmés. |
+| Talents | XP en récoltant, bâtissant, tuant, conseillant. Un point par niveau (30 max), trois arbres (**Tab**). Tout est perdu à la mort. |
+| Renom | Gagné en fin de partie, dépensé au menu en améliorations **permanentes** (sauvegardées). |
+| Mort | La charge tombe au sol ; le Général entraîne un nouveau péon (prix d'un péon, après le combat). |
 
 ## Lancer
 
 1. Ouvrir le dossier dans **Godot 4.7** (`project.godot`), laisser l'import se terminer.
-2. `F5` — la scène principale est `scenes/world/test_forest.tscn`.
+2. `F5` — menu principal : Partie libre (2 cartes, 3 difficultés), Campagne (3 missions), Progression, Options.
 
-| Action | Touche |
-|---|---|
-| Se déplacer | ZQSD (AZERTY) / WASD (QWERTY) — touches *physiques* |
-| Sprint (consomme l'endurance) | Maj |
-| Sauter | Espace |
-| Coup de hache | Clic gauche (maintenir = coups enchaînés) |
-| Ramasser une bûche (en la visant) | E |
-| Déposer le bois (dans la zone du dépôt) | E |
-| Miner l'or (dans la mine, sur une veine) | Clic gauche |
-| Construire un chantier | E (maintenir) |
-| Rejouer (écran de fin) | R |
-| *Test* : -300 PV au bâtiment le plus proche / lancer la vague suivante | K / N |
-| Libérer / recapturer la souris | Échap / clic |
+| Action | Clavier | Manette |
+|---|---|---|
+| Se déplacer | ZQSD / WASD (touches physiques) | stick gauche |
+| Regarder | souris | stick droit |
+| Sprint / saut / roulade (à débloquer) | Maj / Espace / Ctrl | L3 / A / B |
+| Coup d'outil (hache, pioche dans la mine) | clic gauche (maintenir) | RT |
+| Ramasser, déposer ; construire et réparer (maintenir) | E | X |
+| Roue de communication (maintenir, viser, relâcher) | Q (touche physique : « A » sur AZERTY) | LB |
+| Talents | Tab | Start |
+| Barricade / achever un chantier (talents) | B / F | — |
+| Libérer la souris | Échap | — |
+| *Test* : -300 PV au bâtiment allié proche / +100 bois et or / assaut ennemi immédiat / +1 niveau | K / L / N / X | — |
 
-## Ce qui est implémenté
-
-**Coupe** — 4 coups (`AXE_DAMAGE` 25 / `TREE_MAX_HEALTH` 100) : petits éclats d'écorce projetés à l'opposé du coup (`WoodChipsVFX`), oscillation élastique du tronc (ressort amorti), secousse d'écran, son d'impact, micro-pause à l'impact (*hit-stop*).
-
-**Explosion en rondins** — à zéro point de vie, le tronc explose sur place : **4 rondins physiques** (`WoodLog`) sont projetés depuis le fût, surtout dans la direction du dernier coup, avec éclats, nuages de poussière et de feuilles (`DustImpactVFX`), fracas et secousse d'écran atténuée par la distance. La souche reste en place, sans collision.
-
-**Ramassage** — viser une bûche affiche « [E] Ramasser ». La bûche disparaît dans un nuage de fumée façon ninja, avec le « clac » d'une bûche qui en cogne une autre, et apparaît aussitôt sur la pile de l'épaule gauche, tenue par la main gauche : la pile grossit de 1 à 10 (4 + 4 + 2) en périphérie gauche de l'écran, tenue par la main gauche. La hache reste utilisable, la charge ralentit (-35 % à 10), « Charge pleine » à 10/10.
-
-**Bâtiments** — `CampBuilding` : points de vie, nom et barre de vie au-dessus, chantier par étapes sous échafaudage (les points de vie montent avec le travail du péon), ruines à zéro point de vie, reconstruction. Valeurs dans `GameConfig.BUILDINGS`.
-
-**Général, vagues, unités** — `General` (plan de construction, recrutement), `GameDirector` (vagues, victoire, défaite), `Unit` (squelettes et grunts : choix de cible, déplacement, corps à corps), `WatchTower` (tir).
-
-**Dépôt au camp** — la pile de bois (quatre piquets dans la cour du bastion et de la scierie) affiche « [E] Déposer le bois (n) » dès qu'on entre dans sa zone avec du bois. Les rondins quittent l'épaule un par un et volent jusqu'à la pile, qui grandit (3 tas en pyramide de 28 rondins, solides) ; le stock global du camp (`CampEconomy`) s'affiche en haut à gauche. `STOCKPILE_AUTO_DEPOSIT` permet de décharger sans appuyer sur E.
-
-**Joueur** — corps d'orc complet animé (idle/marche/course/sprint/saut), visible en regardant vers le bas sans masquer le sol ; ombre portée complète (tête et hache comprises) ; bruits de pas cadencés ; endurance du sprint ; pénalité de charge déjà câblée (`get_carry_speed_multiplier`, -35 % à 10 rondins). Le bras droit tient la hache par IK, le coup est animé procéduralement en espace caméra. Bras, hache et corps utilisent le **Z-Clip Depth Scaling** (`use_z_clip_scale`, `z_clip_scale = 0.1`).
-
-Toutes les valeurs d'équilibrage et de *game feel* sont dans `scripts/core/game_config.gd`.
+Les touches du clavier se reconfigurent dans Options.
 
 ## Structure
 
 ```
 assets/        modèles, sons, textures (voir CREDITS.md)
-scenes/        player/, trees/, props/, camp/, units/, vfx/, ui/, world/
+scenes/        player/, trees/, props/, camp/ (building.tscn), units/ (unit.tscn), vfx/, ui/, world/ (cartes, mine)
 scripts/
-  core/        GameConfig et CampEconomy (autoloads), GameDirector, ZClip
-  camp/        CampBuilding, Bastion, LumberMill, WatchTower, WoodStockpile
-  units/       Unit (squelettes, grunts)
-  ai/          General
-  world/       GoldMine
-  debug/       touches de test (K / N)
-  player/      Player, FirstPersonBody (+ modificateurs de squelette), AxeController, CameraShake
-  trees/       ChoppableTree
-  props/       WoodLog
-  vfx/         OneShotVFX, WoodChipsVFX, DustImpactVFX
-  ui/          HUD
-tests/         scénarios automatiques avec captures (voir CLAUDE.md)
-tools/asset_pipeline/   scripts Blender/Python ayant produit les assets
-tools/level_gen/        générateur de la forêt de test (+ texture de terre battue)
-docs/          cahier des charges
-PROGRESS.md    état du projet et suite (reprise de session)
+  core/        GameConfig (toutes les données), CampEconomy (un par camp), GameDirector, NavGraph, ZClip
+  ai/          General (IA d'un camp), WorkerOrders (ordres, loyauté, confiance, influence)
+  camp/        CampBuilding (tous les bâtiments)
+  units/       Unit (péons du Général, soldats, lanceurs, volants, siège, héros)
+  player/      Player, LogCarrier (portage et actions E), FirstPersonBody, AxeController, CameraShake
+  progress/    WorkerProgress (XP, talents), MetaProgress (Renom, sauvegarde, options)
+  world/       GoldMine, GoldVein
+  props/       WoodLog, GoldSack, WeaponPickup, Barricade, rochers, buissons
+  ui/          HUD, Minimap, CommWheel, TalentScreen, MainMenu, UiKit
+  vfx/, trees/, debug/
+tests/         scénarios automatiques (voir CLAUDE.md)
+tools/         asset_pipeline/ (Blender, Python), level_gen/gen_maps.py (cartes)
+docs/          cahier des charges (PDF) et ancien extrait
+PROGRESS.md    état du projet, décisions, écarts avec le cahier des charges
 ```
 
 ### Ajouter un arbre

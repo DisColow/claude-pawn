@@ -29,6 +29,7 @@ const AXE_IN_HAND := Transform3D(Vector3(0, -1, 0), Vector3(0, 0, 1), Vector3(-1
 @export var model_scene: PackedScene = preload("res://assets/models/characters/orc_worker.glb")
 @export var axe_scene: PackedScene = preload("res://assets/models/props/axe.glb")
 @export var pickaxe_scene: PackedScene = preload("res://assets/models/props/pickaxe.glb")
+@export var hammer_scene: PackedScene = preload("res://assets/models/props/hammer.glb")
 const SACK_SCENE := preload("res://assets/models/mine/sack.gltf")
 ## Sac à dos : position par rapport à l'os du haut du dos, dans le repère du corps (derrière = +Z).
 const BACKPACK_OFFSET := Vector3(0.0, -0.12, 0.17)
@@ -258,10 +259,14 @@ func _attach_axe(target_skeleton: Skeleton3D, _shadow_only: bool) -> void:
 	_put_tool(attachment, axe_scene, _tool_attachments.size() == 2)
 
 
-## Change l'outil tenu en main : pioche dans la mine, hache ailleurs.
-func set_pickaxe(use_pickaxe: bool) -> void:
+## Change l'outil tenu en main : "axe" (hache), "pickaxe" (pioche, dans la mine), "hammer"
+## (marteau, sur un chantier) ou une scène d'arme ramassée.
+func set_tool(tool: String, weapon: PackedScene = null) -> void:
+	var scene := weapon
+	if scene == null:
+		scene = pickaxe_scene if tool == "pickaxe" else (hammer_scene if tool == "hammer" else axe_scene)
 	for index in _tool_attachments.size():
-		_put_tool(_tool_attachments[index], pickaxe_scene if use_pickaxe else axe_scene, index == 1)
+		_put_tool(_tool_attachments[index], scene, index == 1)
 
 
 func _put_tool(attachment: BoneAttachment3D, scene: PackedScene, shadow_only: bool) -> void:

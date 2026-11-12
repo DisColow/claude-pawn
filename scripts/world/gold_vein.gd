@@ -21,7 +21,7 @@ func _ready() -> void:
 	add_to_group("gold_veins")
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(1.5, 1.5, 0.35)
+	box.size = Vector3(2.2, 2.0, 0.4)
 	shape.shape = box
 	add_child(shape)
 	var gold := StandardMaterial3D.new()
@@ -30,22 +30,22 @@ func _ready() -> void:
 	gold.roughness = 0.35
 	gold.emission_enabled = true
 	gold.emission = Color(1.0, 0.7, 0.15)
-	gold.emission_energy_multiplier = 0.9
+	gold.emission_energy_multiplier = 1.8
 	for index in NUGGETS:
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.22, 0.16, 0.14) * (0.7 + 0.6 * absf(sin(index * 5.3)))
+		mesh.size = Vector3(0.36, 0.26, 0.2) * (0.7 + 0.6 * absf(sin(index * 5.3)))
 		mesh.material = gold
 		var nugget := MeshInstance3D.new()
 		nugget.mesh = mesh
 		# Pépites en traînée oblique sur la paroi, orientations variées mais stables.
 		var along := float(index) / (NUGGETS - 1) - 0.5
-		nugget.position = Vector3(along * 1.2, sin(index * 2.1) * 0.25 + along * 0.5, -0.12)
+		nugget.position = Vector3(along * 1.8, sin(index * 2.1) * 0.4 + along * 0.7, -0.14)
 		nugget.rotation = Vector3(index * 1.3, index * 0.7, index * 2.9)
 		add_child(nugget)
 		_nuggets.append(nugget)
 	_light = OmniLight3D.new()
 	_light.light_color = Color(1.0, 0.75, 0.35)
-	_light.omni_range = 5.0
+	_light.omni_range = 4.0
 	_light.position = Vector3(0.0, 0.2, -0.8)
 	add_child(_light)
 	_audio = AudioStreamPlayer3D.new()
@@ -78,6 +78,28 @@ func take_hit(_damage: float, hit_position: Vector3, hit_normal: Vector3, _from_
 		_audio.play()
 
 
+## Talent Maître prospecteur : un repère doré visible à travers les murs.
+func set_highlight(enabled: bool) -> void:
+	var marker := get_node_or_null("Highlight") as MeshInstance3D
+	if marker == null and enabled:
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		material.no_depth_test = true
+		material.albedo_color = Color(1.0, 0.85, 0.2, 0.9)
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		var quad := QuadMesh.new()
+		quad.size = Vector2(0.35, 0.35)
+		quad.material = material
+		marker = MeshInstance3D.new()
+		marker.name = "Highlight"
+		marker.mesh = quad
+		marker.position = Vector3(0.0, 0.0, -0.3)
+		add_child(marker)
+	if marker:
+		marker.visible = enabled
+
+
 ## Retire jusqu'à `amount` or de la veine et renvoie ce qui a vraiment été extrait.
 func extract(amount: int) -> int:
 	var taken := mini(amount, gold_left)
@@ -92,4 +114,4 @@ func _refresh() -> void:
 	var shown := ceili(ratio * NUGGETS)
 	for index in NUGGETS:
 		_nuggets[index].visible = index < shown
-	_light.light_energy = 0.2 + 1.3 * ratio
+	_light.light_energy = 0.15 + 0.9 * ratio

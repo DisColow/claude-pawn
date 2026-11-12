@@ -12,6 +12,7 @@ Jeu FPS « péon orc » dans un RTS, **Godot 4.7.2** (Forward+, Jolt). Cahier de
 - Échanges **en français**. L'utilisateur avance **étape par étape** : ne faire que l'étape demandée, poser les questions quand un choix lui revient.
 - Il teste sous **Windows** en téléchargeant le ZIP de la branche :
   `https://github.com/DisColow/claude-pawn/archive/refs/heads/<branche>.zip` (dans un dossier neuf, pas par-dessus l'ancien).
+- Remarques de l'utilisateur à respecter (2026-11-12) : chantier en **fantôme vert** intangible jusqu'au premier coup ; on construit **au marteau** ; on dépose **directement dans le bâtiment**, de n'importe quel côté (pas de zone devant).
 - Branche actuelle : `feature/decoupe-bois`. Pousser après chaque étape validée par des tests.
 
 ## Code
@@ -19,14 +20,16 @@ Jeu FPS « péon orc » dans un RTS, **Godot 4.7.2** (Forward+, Jolt). Cahier de
 - Valeurs d'équilibrage **uniquement** dans `scripts/core/game_config.gd` (constantes, commentées en français).
 - Commentaires et docstrings en français, style `##` de GDScript. Typage statique partout (les avertissements GDScript doivent rester à zéro).
 - Autoloads à état (ex. `CampEconomy`) : y accéder par `Classe.instance`, jamais par le nom de l'autoload (introuvable à la compilation des tests lancés avec `-s`).
-- Couches physiques : 1 world, 2 player, 3 trees (valeur 4), 4 logs (valeur 8), 5 units (valeur 16 : squelettes et grunts).
+- Couches physiques : 1 world, 2 player, 3 trees (valeur 4), 4 logs (valeur 8), 5 units (valeur 16 : unités des deux camps).
 - Éléments de la vue subjective : passer par `ZClip.apply()`.
 - **Avant chaque commit qui touche des scènes, des assets ou `project.godot` : lancer `tools/resave_with_editor.sh`.**
   Il fait passer le vrai éditeur Godot (réimport, détection 3D des textures, scènes réenregistrées avec
   `uid`/`unique_id`). Sans ça, l'éditeur de l'utilisateur réécrit ces fichiers à l'ouverture et ses
   `git pull` suivants partent en conflit (problème rencontré le 2026-11-07). Le script est idempotent.
 - Scènes écrites ou modifiées par script : vérifier qu'elles se chargent (test `load_all`), puis outil ci-dessus.
-- La forêt de test se régénère avec `tools/level_gen/gen_test_forest.py` (qui lance l'outil tout seul).
+- Les cartes (`scenes/world/map_*.tscn`) se régénèrent avec `tools/level_gen/gen_maps.py` (qui lance l'outil tout seul) ; ne pas les éditer à la main.
+- Bâtiments, unités, talents, améliorations, Général : tout est décrit par les dictionnaires de `GameConfig` ; une scène générique par famille (`scenes/camp/building.tscn`, `scenes/units/unit.tscn`), `kind` et `team` réglés avant `add_child`.
+- Ne jamais envelopper un volume où l'on entre avec les montagnes KayKit : ce sont des blocs imbriqués dont les faces internes remplissent l'intérieur (bug de la mine du 2026-11-12).
 
 ## Environnement cloud (à réinstaller dans un conteneur neuf)
 
@@ -44,14 +47,14 @@ Puis, dans le projet : `godot --headless --import` (ré-import ; nécessaire aus
 
 Scripts dans `tests/` (en-tête de chaque fichier = usage) :
 - `load_all.gd` — charge toutes les scènes (headless, sans Xvfb).
-- `play_test.gd` — scénario en jeu avec captures : `chop`, `look`, `tp`.
+- `play_test.gd` — scénario sur la carte avec captures : `chop`, `look`, `tp`.
 - `tree_test.gd` — un arbre isolé frappé 4 fois.
 - `move_test.gd` — vitesses de marche/sprint, endurance, saut.
 - `pickup_test.gd` — ramassage des bûches (E) : disparition en fumée, pile 1→10, ralentissement, charge pleine.
-- `deposit_test.gd` — pile de bois seule (E dans la zone) : vol des rondins, stock global, pile qui grandit, collision.
-- `building_test.gd` — scierie : chantier par étapes, points de vie, dépôt refusé hors « debout », dégâts, destruction, reconstruction.
-- `game_test.gd` — partie complète dans la forêt : ordres du Général, mine d'or, construction par le péon, grunts, vague, tours, combat et mort du joueur, défaite (argument `victory` : victoire). Long (~5 min).
 - `mine_test.gd` — mine d'or : entrer, pioche en main, 1 or par coup jusqu'à 10, veine qui s'épuise, bois et or exclusifs, charge lâchée à la mort puis ramassée, sac à dos.
+- `building_test.gd` — bâtiment : fantôme vert jusqu'au premier coup, étapes, points de vie, réparation, ruines, tour qui tire, palier de l'hôtel de ville, dépôt des quatre côtés.
+- `match_test.gd` — partie jouée par script sur « La Vallée » : chantier au marteau, dépôt, ordres et loyauté, roue et confiance, talents, traître, appel aux armes, mort et nouveau péon, victoire et Renom. Long (~4 min).
+- `sim_test.gd` — **sans rendu** (headless) : les deux Généraux jouent seuls en accéléré, état des camps toutes les 30 s. À lancer après tout changement d'équilibrage ou d'IA.
 - `props_test.gd` — rocher bloquant, buisson traversable qui froisse.
 - `preview.gd` — aperçu de modèles/scènes.
 

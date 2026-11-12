@@ -28,6 +28,10 @@ const READY_EDGE := Vector3(-0.25, 0.1, -1.0)
 @export var body: FirstPersonBody
 @export var camera: Camera3D
 
+## Vitesse du coup (talents, améliorations) et dégâts de l'outil, écrits par le joueur.
+var speed_scale := 1.0
+var damage := GameConfig.AXE_DAMAGE
+
 var phase := Phase.READY
 var _time := 0.0
 var _hit_stop := 0.0
@@ -75,7 +79,7 @@ func _start_swing() -> void:
 func _advance(delta: float) -> void:
 	if phase == Phase.READY:
 		return
-	_time += delta
+	_time += delta * speed_scale
 	var hit_time := GameConfig.AXE_HIT_TIME
 	var windup_end := hit_time * 0.62
 	match phase:
@@ -109,7 +113,7 @@ func _resolve_hit() -> void:
 	_did_hit = true
 	_impact_angle = STRIKE_ANGLE
 	_hit_stop = HIT_STOP_TIME
-	result.collider.take_hit(GameConfig.AXE_DAMAGE, result.position, result.normal, owner.global_position, _swing_direction())
+	result.collider.take_hit(damage, result.position, result.normal, owner.global_position, _swing_direction())
 	hit_landed.emit(result.collider, result.position)
 
 

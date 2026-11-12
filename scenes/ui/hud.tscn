@@ -1,25 +1,11 @@
-[gd_scene format=3 uid="uid://dbvbeejtky3eq"]
+[gd_scene format=3 uid="uid://6fsbtdtvtj7k"]
 
 [ext_resource type="Script" uid="uid://dg7yh85kyrllj" path="res://scripts/ui/hud.gd" id="1_script"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBox_bg"]
-bg_color = Color(0.05, 0.05, 0.04, 0.55)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBox_fill"]
-bg_color = Color(0.86, 0.72, 0.28, 0.95)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[node name="HUD" type="CanvasLayer" unique_id=1974809072]
+[node name="HUD" type="CanvasLayer" unique_id=1913953281]
 script = ExtResource("1_script")
 
-[node name="Root" type="Control" parent="." unique_id=1486152443]
+[node name="Root" type="Control" parent="." unique_id=220553097]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -27,87 +13,3 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-
-[node name="Crosshair" type="ColorRect" parent="Root" unique_id=986865409]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -2.0
-offset_top = -2.0
-offset_right = 2.0
-offset_bottom = 2.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(1, 1, 1, 0.8)
-
-[node name="StaminaBar" type="ProgressBar" parent="Root" unique_id=2018505182]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -140.0
-offset_top = -46.0
-offset_right = 140.0
-offset_bottom = -36.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-theme_override_styles/background = SubResource("StyleBox_bg")
-theme_override_styles/fill = SubResource("StyleBox_fill")
-value = 100.0
-show_percentage = false
-
-[node name="PromptLabel" type="Label" parent="Root" unique_id=268345370]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = 28.0
-offset_right = 200.0
-offset_bottom = 58.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 0.96, 0.86, 1)
-theme_override_colors/font_outline_color = Color(0.1, 0.07, 0.03, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 20
-horizontal_alignment = 1
-
-[node name="LoadLabel" type="Label" parent="Root" unique_id=1187216649]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = -56.0
-offset_right = 260.0
-offset_bottom = -24.0
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.96, 0.84, 0.6, 1)
-theme_override_colors/font_outline_color = Color(0.1, 0.07, 0.03, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 22
-
-[node name="CampLabel" type="Label" parent="Root" unique_id=415166682]
-unique_name_in_owner = true
-layout_mode = 1
-offset_left = 24.0
-offset_top = 20.0
-offset_right = 520.0
-offset_bottom = 52.0
-theme_override_colors/font_color = Color(0.96, 0.84, 0.6, 1)
-theme_override_colors/font_outline_color = Color(0.1, 0.07, 0.03, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 22

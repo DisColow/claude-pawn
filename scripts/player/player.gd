@@ -1,7 +1,9 @@
 class_name Player
 extends CharacterBody3D
-## Travailleur orc en vue FPS : déplacement (ZQSD/WASD), sprint avec endurance, saut, coup de hache,
-## ramassage des bûches (E, via LogCarrier).
+## Travailleur orc en vue FPS (§4 du cahier des charges) : déplacement, sprint avec endurance, saut,
+## roulade, coup d'outil, vie et mort. Le portage et les actions avec E sont dans `LogCarrier`.
+## Ses statistiques combinent les valeurs de base (`GameConfig`), les talents de la partie
+## (`progress`, remis à zéro à la mort) et les améliorations permanentes (`MetaProgress`).
 
 signal stamina_changed(value: float, max_value: float)
 signal health_changed(value: float, max_value: float)
@@ -18,7 +20,20 @@ var carried_logs := 0
 var stamina := GameConfig.MAX_STAMINA
 var health := GameConfig.PLAYER_MAX_HEALTH
 
+## Talents et niveau de la partie en cours.
+var progress: WorkerProgress
+## true = la réapparition est décidée par le `GameDirector` (nouveau péon entraîné par le Général).
+var managed_respawn := false
+## Coups restants de l'arme ramassée (0 = outil habituel).
+var picked_weapon_hits := 0
+
 var _dead := false
+var _militia_time := 0.0
+var _adrenaline_time := 0.0
+var _dodge_time := 0.0
+var _dodge_cooldown := 0.0
+var _dodge_direction := Vector3.ZERO
+var _barricade_cooldown := 0.0
 var _respawn_timer := 0.0
 var _regen_delay := 0.0
 ## Point de réapparition (position de départ).
@@ -44,6 +59,10 @@ var _was_on_floor := true
 
 func _ready() -> void:
 	add_to_group("player")
+	progress = WorkerProgress.new()
+	progress.name = "Progress"
+	add_child(progress)
+	health = max_health()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	axe.hit_landed.connect(_on_axe_hit)
 	_spawn_transform = global_transform
@@ -51,8 +70,9 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * GameConfig.MOUSE_SENSITIVITY)
-		_pitch = clampf(_pitch - event.relative.y * GameConfig.MOUSE_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT)
+		var sensitivity := GameConfig.MOUSE_SENSITIVITY * (MetaProgress.instance.mouse_sensitivity if MetaProgress.instance else 1.0)
+		rotate_y(-event.relative.x * sensitivity)
+		_pitch = clampf(_pitch - event.relative.y * sensitivity, -PITCH_LIMIT, PITCH_LIMIT)
 	elif event.is_action_pressed("ui_release_mouse"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
@@ -62,6 +82,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_health(delta)
+	_update_timers(delta)
+	# Regard à la manette (stick droit).
+	var look := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+	if look != Vector2.ZERO:
+		rotate_y(-look.x * GameConfig.GAMEPAD_LOOK_SPEED * delta)
+		_pitch = clampf(_pitch - look.y * GameConfig.GAMEPAD_LOOK_SPEED * delta, -PITCH_LIMIT, PITCH_LIMIT)
+	axe.speed_scale = swing_speed()
+	axe.damage = tool_damage()
+	if Input.is_action_just_pressed("barricade") and not _dead:
+		_place_barricade()
 	if Input.is_action_pressed("attack") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not _dead:
 		axe.request_swing()
 
@@ -75,12 +105,17 @@ func _physics_process(delta: float) -> void:
 	wish = wish.normalized() * minf(input.length(), 1.0)
 
 	_update_stamina(delta, input)
-	var target_speed := (GameConfig.SPRINT_SPEED if _sprinting else GameConfig.WALK_SPEED) * get_carry_speed_multiplier()
+	var target_speed := (GameConfig.SPRINT_SPEED if _sprinting else GameConfig.WALK_SPEED) * get_carry_speed_multiplier() * move_multiplier()
+	if Input.is_action_just_pressed("dodge") and not _dead:
+		_try_dodge(wish)
+	if _dodge_time > 0.0:
+		wish = _dodge_direction
+		target_speed = GameConfig.DODGE_DISTANCE / GameConfig.DODGE_TIME
 
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 	elif Input.is_action_just_pressed("jump") and not _dead:
-		velocity.y = GameConfig.JUMP_VELOCITY
+		velocity.y = GameConfig.JUMP_VELOCITY * (1.0 + 0.12 * MetaProgress.level_of("jump_height"))
 
 	var acceleration := GameConfig.GROUND_ACCELERATION if is_on_floor() else GameConfig.AIR_ACCELERATION
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z).move_toward(wish * target_speed, acceleration * target_speed * delta)
@@ -94,14 +129,18 @@ func _physics_process(delta: float) -> void:
 
 # --- Vie -----------------------------------------------------------------------------------
 
-## Dégâts infligés par un ennemi.
+## Dégâts infligés par un ennemi (ignorés pendant une roulade).
 func take_damage(amount: float) -> void:
-	if _dead or amount <= 0.0:
+	if _dead or amount <= 0.0 or _dodge_time > 0.0:
 		return
+	amount *= 1.0 - 0.08 * progress.rank("tough")
+	if _militia_time > 0.0:
+		amount *= 1.0 - GameConfig.MILITIA_ARMOR
 	health = maxf(health - amount, 0.0)
 	_regen_delay = GameConfig.PLAYER_REGEN_DELAY
+	_adrenaline_time = GameConfig.ADRENALINE_TIME
 	camera.add_trauma(GameConfig.SHAKE_PLAYER_HURT)
-	health_changed.emit(health, GameConfig.PLAYER_MAX_HEALTH)
+	health_changed.emit(health, max_health())
 	hurt.emit()
 	if health <= 0.0:
 		_die()
@@ -120,32 +159,137 @@ func get_target_radius() -> float:
 	return 0.4
 
 
-## Mort : le péon lâche sa charge et réapparaît au point de départ après un délai.
+func is_flying() -> bool:
+	return false
+
+
+# --- Statistiques (base + talents + améliorations permanentes) ---------------------------------
+
+func max_health() -> float:
+	return GameConfig.PLAYER_MAX_HEALTH + 15.0 * progress.rank("thick_skin") + 10.0 * MetaProgress.level_of("increased_hp")
+
+
+func wood_capacity() -> int:
+	return GameConfig.BASE_WOOD_CAPACITY + 5 * progress.rank("strong_back") + 10 * progress.rank("titan_hauler") \
+		+ 2 * MetaProgress.level_of("carry_capacity")
+
+
+func gold_capacity() -> int:
+	return GameConfig.BASE_GOLD_CAPACITY + 5 * progress.rank("deep_pockets") + 10 * progress.rank("titan_hauler") \
+		+ 2 * MetaProgress.level_of("carry_capacity")
+
+
+## Vitesse des coups d'outil : hache dehors, pioche dans la mine.
+func swing_speed() -> float:
+	var tool := "faster_pickaxe" if carrier.is_in_mine() else "faster_axe"
+	return 1.0 + 0.1 * progress.rank("efficient_swings") + 0.08 * MetaProgress.level_of(tool)
+
+
+func tool_damage() -> float:
+	var damage := GameConfig.AXE_DAMAGE * (1.0 + 0.15 * progress.rank("power_swing") + 0.12 * MetaProgress.level_of("sharpened_axe"))
+	if picked_weapon_hits > 0:
+		damage *= GameConfig.PICKED_WEAPON_MASTERY if progress.rank("weapon_mastery") > 0 else GameConfig.PICKED_WEAPON_DAMAGE
+	if _militia_time > 0.0:
+		damage *= GameConfig.MILITIA_DAMAGE_BONUS
+	if _in_frenzy():
+		damage *= 1.4
+	return damage
+
+
+func move_multiplier() -> float:
+	return (1.0 + 0.04 * progress.rank("quick_feet") + 0.03 * MetaProgress.level_of("move_speed")) * (1.15 if _in_frenzy() else 1.0)
+
+
+func build_speed() -> float:
+	return 1.0 + 0.15 * progress.rank("hammer_down") + 0.25 * progress.rank("rapid_assembly")
+
+
+func repair_speed() -> float:
+	return 1.0 + 0.15 * progress.rank("careful_work")
+
+
+## Frénésie : sous 30 % de vie avec le talent.
+func _in_frenzy() -> bool:
+	return progress.rank("battle_frenzy") > 0 and health < max_health() * 0.3 and not _dead
+
+
+## Appel aux armes : le péon devient milicien pour `seconds`.
+func set_militia(seconds: float) -> void:
+	_militia_time = maxf(_militia_time, seconds)
+
+
+func is_militia() -> bool:
+	return _militia_time > 0.0
+
+
+func _update_timers(delta: float) -> void:
+	_militia_time = maxf(_militia_time - delta, 0.0)
+	_adrenaline_time = maxf(_adrenaline_time - delta, 0.0)
+	_dodge_time = maxf(_dodge_time - delta, 0.0)
+	_dodge_cooldown = maxf(_dodge_cooldown - delta, 0.0)
+	_barricade_cooldown = maxf(_barricade_cooldown - delta, 0.0)
+
+
+## Roulade (§4.3) : bond dans la direction du déplacement, invulnérable le temps du bond.
+## Débloquée par une amélioration permanente.
+func _try_dodge(wish: Vector3) -> void:
+	if MetaProgress.level_of("dodge_roll") == 0 or _dodge_cooldown > 0.0 or stamina < GameConfig.DODGE_STAMINA or not is_on_floor():
+		return
+	_dodge_direction = wish.normalized() if wish.length() > 0.1 else -global_basis.z
+	_dodge_time = GameConfig.DODGE_TIME
+	_dodge_cooldown = GameConfig.DODGE_COOLDOWN
+	stamina -= GameConfig.DODGE_STAMINA
+	_stamina_regen_delay = GameConfig.STAMINA_REGEN_DELAY
+	camera.add_trauma(0.25)
+
+
+## Barricade temporaire (talent Fortifier) : un mur de rondins posé devant soi.
+func _place_barricade() -> void:
+	if progress.rank("fortify") == 0 or _barricade_cooldown > 0.0:
+		return
+	_barricade_cooldown = GameConfig.BARRICADE_COOLDOWN
+	var barricade := Barricade.new()
+	get_parent().add_child(barricade)
+	var forward := -global_basis.z
+	barricade.global_transform = Transform3D(Basis.looking_at(forward), global_position + forward * 2.2)
+
+
+## Mort (§4.5) : la charge tombe au sol, les talents et le niveau de la partie sont perdus.
+## Un nouveau péon est entraîné par le Général (`GameDirector`) ; hors partie, on réapparaît
+## simplement au point de départ après un délai.
 func _die() -> void:
 	_dead = true
 	_respawn_timer = GameConfig.PLAYER_RESPAWN_TIME
+	picked_weapon_hits = 0
 	carrier.drop_on_ground()
+	carrier.set_held_weapon(null)
+	progress.reset()
 	died.emit()
+
+
+## Réapparition en `at` : un péon tout neuf.
+func respawn(at: Transform3D) -> void:
+	_dead = false
+	global_transform = at
+	velocity = Vector3.ZERO
+	_pitch = 0.0
+	health = max_health()
+	stamina = GameConfig.MAX_STAMINA
+	health_changed.emit(health, max_health())
+	respawned.emit()
 
 
 func _update_health(delta: float) -> void:
 	if _dead:
 		_respawn_timer -= delta
-		if _respawn_timer <= 0.0:
-			_dead = false
-			global_transform = _spawn_transform
-			velocity = Vector3.ZERO
-			_pitch = 0.0
-			health = GameConfig.PLAYER_MAX_HEALTH
-			stamina = GameConfig.MAX_STAMINA
-			health_changed.emit(health, GameConfig.PLAYER_MAX_HEALTH)
-			respawned.emit()
+		if _respawn_timer <= 0.0 and not managed_respawn:
+			respawn(_spawn_transform)
 		return
 	if _regen_delay > 0.0:
 		_regen_delay -= delta
-	elif health < GameConfig.PLAYER_MAX_HEALTH:
-		health = minf(health + GameConfig.PLAYER_REGEN * delta, GameConfig.PLAYER_MAX_HEALTH)
-		health_changed.emit(health, GameConfig.PLAYER_MAX_HEALTH)
+	elif health < max_health():
+		health = minf(health + GameConfig.PLAYER_REGEN * (1.0 + 0.3 * MetaProgress.level_of("regeneration")) * delta, max_health())
+		health_changed.emit(health, max_health())
 
 
 ## Secondes restantes avant la réapparition (0 si vivant).
@@ -156,9 +300,10 @@ func get_respawn_time() -> float:
 ## Pénalité de vitesse proportionnelle à la charge : jusqu'à -35 % à pleine capacité de bois,
 ## -15 % à sac d'or plein (on ne porte jamais les deux à la fois).
 func get_carry_speed_multiplier() -> float:
-	var load_ratio := clampf(float(carried_logs) / GameConfig.BASE_WOOD_CAPACITY, 0.0, 1.0)
-	var gold_ratio := clampf(float(carrier.gold) / GameConfig.BASE_GOLD_CAPACITY, 0.0, 1.0)
-	return 1.0 - GameConfig.MAX_CARRY_SPEED_PENALTY * load_ratio - GameConfig.MAX_GOLD_CARRY_SPEED_PENALTY * gold_ratio
+	var load_ratio := clampf(float(carried_logs) / wood_capacity(), 0.0, 1.0)
+	var gold_ratio := clampf(float(carrier.gold) / gold_capacity(), 0.0, 1.0)
+	var relief := maxf(1.0 - 0.3 * progress.rank("light_load"), 0.0)
+	return 1.0 - (GameConfig.MAX_CARRY_SPEED_PENALTY * load_ratio + GameConfig.MAX_GOLD_CARRY_SPEED_PENALTY * gold_ratio) * relief
 
 
 func _update_stamina(delta: float, input: Vector2) -> void:
@@ -174,7 +319,8 @@ func _update_stamina(delta: float, input: Vector2) -> void:
 	elif _stamina_regen_delay > 0.0:
 		_stamina_regen_delay -= delta
 	else:
-		stamina = minf(stamina + GameConfig.STAMINA_REGEN * delta, GameConfig.MAX_STAMINA)
+		var boost := 2.0 if progress.rank("adrenaline") > 0 and _adrenaline_time > 0.0 else 1.0
+		stamina = minf(stamina + GameConfig.STAMINA_REGEN * boost * delta, GameConfig.MAX_STAMINA)
 	stamina_changed.emit(stamina, GameConfig.MAX_STAMINA)
 
 
@@ -217,6 +363,16 @@ func _play_footstep(volume: float) -> void:
 func _on_axe_hit(collider: Object, _position: Vector3) -> void:
 	if collider is GoldVein:
 		carrier.mine_vein(collider as GoldVein)
+	elif collider is Unit:
+		_adrenaline_time = GameConfig.ADRENALINE_TIME
+		var foe := collider as Unit
+		if progress.rank("disarm") > 0 and not foe.disarmed and randf() < 0.2:
+			foe.disarm()
+		# L'arme ramassée s'use à chaque coup porté, puis casse.
+		if picked_weapon_hits > 0:
+			picked_weapon_hits -= 1
+			if picked_weapon_hits == 0:
+				carrier.set_held_weapon(null)
 	camera.add_trauma(GameConfig.SHAKE_AXE_HIT)
 	if chop_sound:
 		_axe_audio.stream = chop_sound
