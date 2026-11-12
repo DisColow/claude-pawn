@@ -348,6 +348,10 @@ func _manage_training(step: float, lodge: CampBuilding) -> void:
 		if not building.is_built() or building.kind == "war_lodge":
 			continue
 		for kind: String in GameConfig.BUILDINGS[building.kind].get("trains", []):
+			# Seulement ce qu'on peut payer et nourrir tout de suite : pas d'attente sur une unité chère.
+			var unit: Dictionary = GameConfig.UNITS[kind]
+			if not camp.can_afford(unit["wood"], unit["gold"]) or camp.food_used() + int(unit["food"]) > camp.food_cap():
+				continue
 			var score := float(counts.get(kind, 0)) / float(GameConfig.GENERAL_ARMY_WEIGHTS[kind])
 			if score < best_score:
 				best_score = score
